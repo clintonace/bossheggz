@@ -1,7 +1,9 @@
 # SeggzApp — production stack
 #
 #   1. cp .env.production.example .env.production   and fill it in
-#   2. docker compose -f compose.production.yaml --env-file .env.production up -d --build
+#   2. docker compose -f compose.production.yaml --env-file .env.production pull     (ready-made image from Docker Hub)
+#      docker compose -f compose.production.yaml --env-file .env.production up -d
+#      — or build it on the server instead: ... up -d --build
 #   3. docker compose -f compose.production.yaml --env-file .env.production exec app php artisan app:make-admin you@yourdomain.com
 #
 # Services: app (Nginx + PHP-FPM), queue, scheduler, db (MySQL), redis, phpmyadmin,
@@ -15,7 +17,8 @@ x-app: &app
   build:
     context: .
     dockerfile: docker/production/Dockerfile
-  image: seggzapp-app:latest
+  # Published from the prod branch to Docker Hub; override with APP_IMAGE.
+  image: ${APP_IMAGE:-clintonace/bossheggz:prod}
   restart: unless-stopped
   env_file: .env.production
   environment: &app-environment
