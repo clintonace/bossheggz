@@ -60,4 +60,27 @@ return [
 
     'dev_account_switcher' => (bool) env('DEV_ACCOUNT_SWITCHER', env('APP_ENV') === 'local'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Database seeding (php artisan db:seed)
+    |--------------------------------------------------------------------------
+    |
+    | "seed_demo_data": whether a full db:seed also adds the demo listings,
+    | opportunities, articles, adverts, clients and activity. Demo data can
+    | always be added later from Admin → Data manager.
+    |
+    | "admin": the single admin account db:seed creates when there is none.
+    | Outside local/testing it is only created when both email and password
+    | are set — otherwise use: php artisan app:make-admin you@example.com
+    |
+    */
+
+    'seed_demo_data' => (bool) env('SEED_DEMO_DATA', env('APP_ENV') !== 'production'),
+
+    'admin' => [
+        'name' => env('ADMIN_NAME', 'Site Admin'),
+        'email' => env('ADMIN_EMAIL'),
+        'password' => env('ADMIN_PASSWORD'),
+    ],
+
 ];

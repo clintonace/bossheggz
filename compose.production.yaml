@@ -1,0 +1,143 @@
+# SeggzApp — production stack
+#
+#   1. cp .env.production.example .env.production   and fill it in
+#   2. docker compose -f compose.production.yaml --env-file .env.production up -d --build
+#   3. docker compose -f compose.production.yaml --env-file .env.production exec app php artisan app:make-admin you@yourdomain.com
+#
+# Services: app (Nginx + PHP-FPM), queue, scheduler, db (MySQL), redis, phpmyadmin,
+# caddy (automatic HTTPS) and backup (nightly database + uploads backups to ./backups).
+# Only Caddy is reachable from the internet (ports 80/443). Everything else stays on the
+# private Docker network.
+
+name: seggzapp
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/production/Dockerfile
+  image: seggzapp-app:latest
+  restart: unless-stopped
+  env_file: .env.production
+  environment: &app-environment
+    DB_CONNECTION: mysql
+    DB_HOST: db
+    DB_PORT: 3306
+    REDIS_HOST: redis
+    AUTORUN_ENABLED: "false"
+  volumes:
+    - storage:/var/www/html/storage
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    environment:
+      <<: *app-environment
+      # On start: storage link, migrations and config/route/view caching.
+      AUTORUN_ENABLED: "true"
+
+  queue:
+    <<: *app
+    command: ["php", "/var/www/html/artisan", "queue:work", "--tries=3", "--max-time=3600"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-queue"]
+      start_period: 10s
+
+  scheduler:
+    <<: *app
+    command: ["php", "/var/www/html/artisan", "schedule:work"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-schedule"]
+      start_period: 10s
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in .env.production}
+      MYSQL_USER: ${DB_USERNAME:?Set DB_USERNAME in .env.production}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env.production}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_ABSOLUTE_URI: https://${PMA_DOMAIN:?Set PMA_DOMAIN in .env.production}/
+      UPLOAD_LIMIT: 128M
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.production}
+      PMA_DOMAIN: ${PMA_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.production}
+      PMA_AUTH_USER: ${PMA_AUTH_USER:?Set PMA_AUTH_USER in .env.production}
+      PMA_AUTH_HASH: ${PMA_AUTH_HASH:?Set PMA_AUTH_HASH in .env.production (see the comment there)}
+    volumes:
+      - ./docker/production/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+      - phpmyadmin
+
+  backup:
+    image: mysql:8.4
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      MYSQL_PWD: ${DB_PASSWORD}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./docker/production/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+      - storage:/storage:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  storage:
+  mysql-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

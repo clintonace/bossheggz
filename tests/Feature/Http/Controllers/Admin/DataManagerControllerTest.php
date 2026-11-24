@@ -188,6 +188,8 @@ class DataManagerControllerTest extends TestCase
 
     public function test_full_database_seeder_never_adds_a_second_admin_or_duplicates(): void
     {
+        config(['listings.seed_demo_data' => true]);
+
         $this->seed();
         $this->seed();
 
@@ -198,10 +200,38 @@ class DataManagerControllerTest extends TestCase
 
     public function test_full_database_seeder_creates_one_admin_on_an_empty_database(): void
     {
+        config(['listings.seed_demo_data' => true]);
         $this->admin->delete();
 
         $this->seed();
 
         $this->assertSame(['admin@example.com'], User::where('is_admin', true)->pluck('email')->all());
+    }
+
+    public function test_without_demo_data_only_the_admin_is_seeded(): void
+    {
+        config(['listings.seed_demo_data' => false, 'listings.admin.email' => 'owner@bosshegz.test', 'listings.admin.password' => 'a-long-password']);
+        $this->admin->delete();
+
+        $this->seed();
+
+        $this->assertSame(['owner@bosshegz.test'], User::pluck('email')->all());
+        foreach ([Property::class, InvestmentOpportunity::class, Article::class, Advert::class, Engagement::class, Enquiry::class] as $model) {
+            $this->assertSame(0, $model::count(), $model);
+        }
+
+        $this->actingAs(User::sole())->post(route('admin.data.seed.store'), ['datasets' => ['properties']])->assertSessionHasNoErrors();
+        $this->assertSame(9, Property::count());
+    }
+
+    public function test_live_seeding_never_creates_a_default_admin(): void
+    {
+        config(['listings.seed_demo_data' => false, 'listings.admin.email' => null, 'listings.admin.password' => null]);
+        $this->admin->delete();
+        $this->app['env'] = 'production';
+
+        $this->seed();
+
+        $this->assertSame(0, User::count());
     }
 }

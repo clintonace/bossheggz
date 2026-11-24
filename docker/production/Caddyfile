@@ -1,0 +1,20 @@
+# HTTPS front door. Caddy gets and renews Let's Encrypt certificates automatically
+# for both domains once their DNS points at this server (ports 80 and 443 open).
+{
+	email {$ACME_EMAIL}
+}
+
+# The website
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080
+}
+
+# phpMyAdmin — behind an extra username/password, then the MySQL login
+{$PMA_DOMAIN} {
+	encode zstd gzip
+	basic_auth {
+		{$PMA_AUTH_USER} {$PMA_AUTH_HASH}
+	}
+	reverse_proxy phpmyadmin:80
+}

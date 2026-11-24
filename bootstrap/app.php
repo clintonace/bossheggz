@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
         ]);
 
+        // Live, HTTPS is handled by the Caddy container in front of the app (see compose.production.yaml).
+        $middleware->trustProxies(at: '*');
+
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('account.index'));
     })
