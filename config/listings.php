@@ -53,14 +53,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | A floating "Test accounts" button that signs you in as any admin or
-    | client in one click. It is a login backdoor.
-    |
-    | PROD BRANCH: removed from the live site — always off, whatever the .env says.
-    | (It stays available on the dev branch.) Keep this line when merging dev → prod.
+    | client in one click. It is a login backdoor, so it is only enabled in
+    | the local environment by default and must never be enabled in production.
     |
     */
 
-    'dev_account_switcher' => false,
+    'dev_account_switcher' => (bool) env('DEV_ACCOUNT_SWITCHER', env('APP_ENV') === 'local'),
 
     /*
     |--------------------------------------------------------------------------
@@ -77,9 +75,7 @@ return [
     |
     */
 
-    // PROD BRANCH: db:seed never adds demo data here (admin only). Demo data can still be
-    // added from Admin → Data manager. Keep this line when merging dev → prod.
-    'seed_demo_data' => false,
+    'seed_demo_data' => (bool) env('SEED_DEMO_DATA', env('APP_ENV') !== 'production'),
 
     'admin' => [
         'name' => env('ADMIN_NAME', 'Site Admin'),
