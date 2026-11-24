@@ -1,8 +1,11 @@
 @php($controlClasses = 'field-input appearance-none bg-white/70 ring-white/80')
 
 <x-layouts.app :title="$content['meta']->value('title')" :description="$content['meta']->value('description')">
+    <x-advert-slot :adverts="$adverts" at="hero:before" class="mt-6" />
     <x-page-hero :section="$content['hero']" />
+    <x-advert-slot :adverts="$adverts" at="hero:after" class="mt-12" />
 
+    <x-advert-slot :adverts="$adverts" at="why:before" class="mt-20" />
     {{-- Why land banking --}}
     @if ($content['why']->isShown())
     <section class="mx-auto mt-20 max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -20,7 +23,9 @@
         </div>
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="why:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="opportunities:before" class="mt-20" />
     {{-- Filters + results --}}
     <section id="land-opportunities" class="mx-auto mt-20 max-w-7xl scroll-mt-28 px-4 sm:px-6 lg:px-8">
         <form method="GET" action="{{ route('land-banking.index') }}#land-opportunities" class="glass-strong grid grid-cols-1 items-end gap-3 rounded-3xl p-4 sm:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto]">
@@ -75,7 +80,9 @@
             <div class="mt-12">{{ $opportunities->links('pagination') }}</div>
         @endif
     </section>
+    <x-advert-slot :adverts="$adverts" at="opportunities:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="checklist:before" class="mt-20" />
     {{-- Know the land + enquiry --}}
     @if ($content['checklist']->isShown())
     @php($checklist = $content['checklist'])
@@ -91,8 +98,11 @@
         <x-enquiry-form :type="\App\Models\EnquiryType::LandBanking" :title="$checklist->value('form_title')" :description="$checklist->value('form_description')" :opportunities="$openOpportunities" whatsapp-text="Hello, I'd like to know more about your land banking opportunities." data-reveal />
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="checklist:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="cta:before" class="mt-20" />
     @if ($content['cta']->isShown())
         <x-cta-band class="mt-24" :title="$content['cta']->value('title')" :description="$content['cta']->value('description')" />
     @endif
+    <x-advert-slot :adverts="$adverts" at="cta:after" class="mt-16" />
 </x-layouts.app>

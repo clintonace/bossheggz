@@ -95,6 +95,46 @@ class SiteSetting extends Model
     }
 
     /**
+     * How strong the frosted-glass surfaces are: "frosted" (default), "subtle" or "solid".
+     */
+    public function glassStyle(): string
+    {
+        return in_array($this->value('glass'), ['frosted', 'subtle', 'solid'], true) ? $this->value('glass') : 'frosted';
+    }
+
+    /**
+     * The soft coloured glow behind the glass surfaces.
+     */
+    public function ambientEnabled(): bool
+    {
+        return (bool) $this->value('ambient');
+    }
+
+    /**
+     * Whether first-time visitors are shown the guided tour automatically.
+     */
+    public function tourEnabled(): bool
+    {
+        return (bool) $this->value('tour');
+    }
+
+    /**
+     * The dark contact strip above the public site header.
+     */
+    public function showsContactStrip(): bool
+    {
+        return (bool) $this->value('contact_strip');
+    }
+
+    /**
+     * The branded preloader on the public site (never shown when animations are off).
+     */
+    public function preloaderEnabled(): bool
+    {
+        return (bool) $this->value('preloader') && $this->animationsEnabled();
+    }
+
+    /**
      * Bunny Fonts stylesheet for any chosen font that isn't bundled with the app.
      */
     public function fontStylesheetUrl(): ?string

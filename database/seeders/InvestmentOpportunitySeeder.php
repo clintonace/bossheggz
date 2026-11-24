@@ -13,8 +13,10 @@ class InvestmentOpportunitySeeder extends Seeder
 {
     /**
      * Seed demo investment and land banking opportunities (idempotent).
+     *
+     * @param  bool|null  $land  true = land banking only, false = other investments only, null = both
      */
-    public function run(): void
+    public function run(?bool $land = null): void
     {
         $photo = fn (string $id): string => "https://images.unsplash.com/photo-{$id}?auto=format&fit=crop&w=1400&q=75";
 
@@ -98,6 +100,10 @@ class InvestmentOpportunitySeeder extends Seeder
         ];
 
         foreach ($opportunities as $attributes) {
+            if ($land !== null && ($attributes['category'] === InvestmentCategory::LandBanking) !== $land) {
+                continue;
+            }
+
             InvestmentOpportunity::updateOrCreate(
                 ['title' => $attributes['title']],
                 [

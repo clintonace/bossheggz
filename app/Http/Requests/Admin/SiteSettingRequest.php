@@ -35,6 +35,11 @@ class SiteSettingRequest extends FormRequest
             'sidebar' => ['sometimes', Rule::in(['auto', 'light', 'dark'])],
             'footer' => ['sometimes', Rule::in(['light', 'dark'])],
             'animations' => ['boolean'],
+            'glass' => ['required', Rule::in(['frosted', 'subtle', 'solid'])],
+            'ambient' => ['boolean'],
+            'tour' => ['boolean'],
+            'contact_strip' => ['sometimes', 'boolean'],
+            'preloader' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -54,6 +59,13 @@ class SiteSettingRequest extends FormRequest
     {
         $this->merge([
             'animations' => $this->boolean('animations'),
+            'ambient' => $this->boolean('ambient'),
+            'tour' => $this->boolean('tour'),
+            ...collect(['contact_strip', 'preloader'])
+                ->filter(fn (string $key) => $this->has($key))
+                ->mapWithKeys(fn (string $key) => [$key => $this->boolean($key)])
+                ->all(),
+            'glass' => $this->input('glass', 'frosted'),
             'font_size' => is_numeric($this->input('font_size')) ? (int) $this->input('font_size') : $this->input('font_size'),
             ...collect(['accent', 'primary', 'background'])
                 ->filter(fn (string $key) => is_string($this->input($key)))

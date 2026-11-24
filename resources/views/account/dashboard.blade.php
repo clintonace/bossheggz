@@ -13,7 +13,9 @@
             <div class="max-w-xl">
                 <p class="text-xs font-semibold tracking-[0.2em] text-brass-300 uppercase">{{ now()->format('l, F j') }}</p>
                 <h2 class="mt-3 font-display text-3xl leading-tight sm:text-4xl">
-                    @if ($stats['total'] === 0)
+                    @if ($stats['total'] === 0 && $stats['openEnquiries'] > 0)
+                        You have {{ $stats['openEnquiries'] }} {{ str('enquiry')->plural($stats['openEnquiries']) }} <em class="text-brass-300">in progress.</em>
+                    @elseif ($stats['total'] === 0)
                         Let's find a place you'll love, <em class="text-brass-300">{{ $firstName }}.</em>
                     @elseif ($stats['open'] > 0)
                         You have {{ $stats['open'] }} {{ str('home')->plural($stats['open']) }} <em class="text-brass-300">in progress.</em>
@@ -22,7 +24,9 @@
                     @endif
                 </h2>
                 <p class="mt-3 text-sm leading-relaxed text-ink-300">
-                    @if ($stats['total'] === 0)
+                    @if ($stats['total'] === 0 && $stats['enquiries'] > 0)
+                        Your advisers' updates on land banking, investments and other enquiries appear here and at {{ auth()->user()->email }}.
+                    @elseif ($stats['total'] === 0)
                         Engage with any property and you'll be able to follow every step right here, with updates by email too.
                     @elseif ($stats['viewings'] > 0)
                         {{ $stats['viewings'] }} {{ str('viewing')->plural($stats['viewings']) }} scheduled. We'll notify you here and at {{ auth()->user()->email }} as things move forward.
@@ -35,6 +39,9 @@
                 <a href="{{ route('properties.index') }}" class="btn btn-accent btn-lg">Explore homes <x-icon name="arrow-right" class="size-4" /></a>
                 @if ($stats['total'] > 0)
                     <a href="{{ route('account.engagements.index') }}" class="btn btn-lg bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15">My engagements</a>
+                @endif
+                @if ($stats['enquiries'] > 0)
+                    <a href="{{ route('account.enquiries.index') }}" class="btn btn-lg bg-white/10 text-white ring-1 ring-white/15 backdrop-blur hover:bg-white/15">My enquiries @if ($stats['openEnquiries'] > 0)<span class="rounded-full bg-brass-500 px-1.5 text-[11px] text-white">{{ $stats['openEnquiries'] }}</span>@endif</a>
                 @endif
             </div>
         </div>
@@ -118,16 +125,12 @@
                         <li class="relative">
                             <span @class([
                                 'absolute top-1.5 -left-[29px] size-2.5 rounded-full ring-4 ring-white',
-                                'bg-brass-500' => $item['status'],
-                                'bg-ink-200' => ! $item['status'],
+                                'bg-brass-500' => $item['highlight'],
+                                'bg-ink-200' => ! $item['highlight'],
                             ])></span>
-                            <a href="{{ route('account.engagements.show', $item['engagement']) }}" class="group block">
+                            <a href="{{ $item['url'] }}" class="group block">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    @if ($item['status'])
-                                        <x-status-badge :status="$item['status']" />
-                                    @else
-                                        <span class="pill bg-ink-50 text-ink-500 ring-ink-100">Engaged</span>
-                                    @endif
+                                    <span class="pill {{ $item['badge'] }}">{{ $item['label'] }}</span>
                                     <time class="text-[11px] text-ink-300">{{ $item['date']->diffForHumans() }}</time>
                                 </div>
                                 <p class="mt-1.5 truncate text-sm font-semibold text-ink-900 group-hover:text-brass-700">{{ $item['title'] }}</p>
@@ -139,6 +142,94 @@
             @endif
         </section>
     </div>
+
+    {{-- Enquiries & interests --}}
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <section class="card animate-fade-up p-6 [animation-delay:420ms] xl:col-span-2">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="font-display text-xl text-ink-900">Enquiries in progress</h2>
+                    <p class="mt-1 text-sm text-ink-400">Land banking, investments and adviser requests — and where each one stands</p>
+                </div>
+                @if ($stats['enquiries'] > 0)
+                    <a href="{{ route('account.enquiries.index') }}" class="text-sm font-semibold text-brass-600 hover:text-brass-700">View all {{ $stats['enquiries'] }}</a>
+                @endif
+            </div>
+
+            @if ($activeEnquiries->isEmpty())
+                <div class="mt-6 flex flex-col items-center rounded-2xl border border-dashed border-ink-200 bg-ivory/60 px-6 py-10 text-center">
+                    <span class="grid size-12 place-items-center rounded-2xl bg-white text-brass-500 shadow-soft ring-1 ring-ink-100"><x-icon name="message" /></span>
+                    <p class="mt-4 font-display text-lg text-ink-900">{{ $stats['enquiries'] > 0 ? 'All your enquiries are wrapped up' : 'No enquiries yet' }}</p>
+                    <p class="mt-1 max-w-sm text-sm text-ink-500">Ask about land banking, an investment opportunity or a property while signed in, and follow every update from your adviser here.</p>
+                    <div class="mt-5 flex flex-wrap justify-center gap-2">
+                        <a href="{{ route('land-banking.index') }}" class="btn btn-primary btn-sm">Explore land banking</a>
+                        <a href="{{ route('contact', ['type' => 'consultation']) }}" class="btn btn-outline btn-sm">Speak to an adviser</a>
+                    </div>
+                </div>
+            @else
+                <ul class="mt-6 space-y-3">
+                    @foreach ($activeEnquiries as $enquiry)
+                        @php($enquiryArea = $enquiry->area())
+                        <li>
+                            <a href="{{ route('account.enquiries.show', $enquiry) }}" class="group flex flex-col gap-4 rounded-2xl p-4 ring-1 ring-ink-100 transition hover:bg-ivory/70 hover:ring-ink-200">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div class="flex min-w-0 items-center gap-3">
+                                        <span class="grid size-10 shrink-0 place-items-center rounded-xl ring-1 {{ $enquiryArea->tileClasses() }}"><x-icon :name="$enquiryArea->icon()" class="size-5" /></span>
+                                        <div class="min-w-0">
+                                            <p class="truncate font-display text-lg text-ink-900 group-hover:text-brass-700">{{ $enquiry->subject() }}</p>
+                                            <p class="text-xs text-ink-400">{{ $enquiryArea->label() }} · {{ $enquiry->latestUpdate ? 'Updated '.$enquiry->latestUpdate->created_at->diffForHumans() : 'Sent '.$enquiry->created_at->diffForHumans() }}</p>
+                                        </div>
+                                    </div>
+                                    <x-enquiry-status :status="$enquiry->status" />
+                                </div>
+                                <x-enquiry-tracker :status="$enquiry->status" />
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+
+        <section class="animate-fade-up overflow-hidden rounded-3xl bg-white/70 p-6 shadow-soft ring-1 ring-ink-100 backdrop-blur-xl [animation-delay:460ms]">
+            <h2 class="font-display text-xl text-ink-900">Your interests</h2>
+            <p class="mt-1 text-sm text-ink-400">Jump to an area, or start something new.</p>
+            <ul class="mt-5 space-y-2">
+                @foreach ($interests as $interest)
+                    <li class="group flex items-center gap-3 rounded-2xl bg-white/80 p-3 ring-1 ring-ink-100 transition hover:ring-brass-200">
+                        <span class="grid size-10 shrink-0 place-items-center rounded-xl ring-1 {{ $interest['area']->tileClasses() }}"><x-icon :name="$interest['area']->icon()" class="size-5" /></span>
+                        <a href="{{ route('account.enquiries.index', ['area' => $interest['area']->value]) }}" class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-semibold text-ink-900 group-hover:text-brass-700">{{ $interest['area']->label() }}</span>
+                            <span class="block text-xs text-ink-400">
+                                {{ $interest['total'] }} {{ str('enquiry')->plural($interest['total']) }}@if ($interest['open'] > 0) · <span class="font-semibold text-brass-600">{{ $interest['open'] }} in progress</span>@endif
+                            </span>
+                        </a>
+                        <a href="{{ $interest['area']->browseUrl() }}" class="grid size-8 shrink-0 place-items-center rounded-full text-ink-400 transition hover:bg-ink-50 hover:text-ink-800" title="{{ $interest['area']->browseLabel() }}"><x-icon name="arrow-right" class="size-4" /></a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    </div>
+
+    {{-- Opportunities --}}
+    @if ($opportunities->isNotEmpty())
+        <section class="mt-10">
+            <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end" data-reveal>
+                <div>
+                    <p class="eyebrow">Open for enquiries</p>
+                    <h2 class="mt-2 font-display text-3xl tracking-tight text-ink-950">{{ $interests->firstWhere('area', \App\Enums\InterestArea::LandBanking)['total'] > 0 ? 'Land and investments for you' : 'Investment opportunities' }}</h2>
+                </div>
+                <div class="flex gap-2 self-start sm:self-auto">
+                    <a href="{{ route('land-banking.index') }}" class="btn btn-outline">Land banking</a>
+                    <a href="{{ route('investments.index') }}" class="btn btn-outline">Investments <x-icon name="arrow-right" class="size-4" /></a>
+                </div>
+            </div>
+            <div class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($opportunities as $opportunity)
+                    <x-opportunity-card :opportunity="$opportunity" data-reveal data-reveal-delay="{{ $loop->index * 90 }}" />
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     {{-- Recommendations --}}
     @if ($recommended->isNotEmpty())

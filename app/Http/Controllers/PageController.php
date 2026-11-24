@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AdvertPage;
 use App\Enums\LandingPage;
 use App\Enums\ListingType;
 use App\Enums\PropertyStatus;
+use App\Models\Advert;
 use App\Models\EnquiryType;
 use App\Models\Property;
 use Illuminate\Http\Request;
@@ -21,12 +23,12 @@ class PageController extends Controller
             ->latest('published_at')
             ->first();
 
-        return view('pages.services', ['shortlet' => $shortlet, 'content' => LandingPage::Services->content()]);
+        return view('pages.services', ['shortlet' => $shortlet, 'content' => LandingPage::Services->content(), 'adverts' => Advert::slotsFor(AdvertPage::Services)]);
     }
 
     public function about(): View
     {
-        return view('pages.about', ['content' => LandingPage::About->content()]);
+        return view('pages.about', ['content' => LandingPage::About->content(), 'adverts' => Advert::slotsFor(AdvertPage::About)]);
     }
 
     public function contact(Request $request): View
@@ -35,6 +37,7 @@ class PageController extends Controller
 
         return view('pages.contact', [
             'content' => LandingPage::Contact->content(),
+            'adverts' => Advert::slotsFor(AdvertPage::Contact),
             'types' => $types,
             'selectedType' => $types->firstWhere('slug', $request->string('type')->toString())?->slug ?? EnquiryType::General,
             'interest' => $request->string('interest')->limit(200, '')->toString(),

@@ -1,6 +1,9 @@
 <x-layouts.app :title="$content['meta']->value('title')" :description="$content['meta']->value('description')">
+    <x-advert-slot :adverts="$adverts" at="hero:before" class="mt-6" />
     <x-page-hero :section="$content['hero']" />
+    <x-advert-slot :adverts="$adverts" at="hero:after" class="mt-12" />
 
+    <x-advert-slot :adverts="$adverts" at="articles:before" class="mt-20" />
     <section class="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Filter by category">
             <a href="{{ route('insights.index') }}" @class(['chip', 'chip-active' => ! $category, 'bg-white/50' => $category])>All</a>
@@ -39,10 +42,13 @@
             <div class="mt-12">{{ $articles->links('pagination') }}</div>
         @endif
     </section>
+    <x-advert-slot :adverts="$adverts" at="articles:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="cta:before" class="mt-20" />
     @if ($content['cta']->isShown())
         <x-cta-band class="mt-24" :title="$content['cta']->value('title')" :description="$content['cta']->value('description')">
             <a href="{{ route('contact', ['type' => 'consultation']) }}" class="btn btn-primary btn-lg">Speak to an Adviser <x-icon name="arrow-right" class="size-4" /></a>
         </x-cta-band>
     @endif
+    <x-advert-slot :adverts="$adverts" at="cta:after" class="mt-16" />
 </x-layouts.app>

@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Account;
 
 use App\Enums\EngagementStatus;
+use App\Enums\InterestArea;
+use App\Enums\OpportunityStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Engagement;
 use App\Models\EngagementUpdate;
+use App\Models\Enquiry;
+use App\Models\EnquiryUpdate;
+use App\Models\InvestmentOpportunity;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -19,6 +24,8 @@ class DashboardController extends Controller
         $user = $request->user();
 
         $engagements = $user->engagements()->with('property.coverImage')->latest()->get();
+        $enquiries = $user->enquiries()->with(['enquirable', 'enquiryType', 'latestUpdate'])->latest()->get();
+        $openEnquiries = $enquiries->filter(fn (Enquiry $enquiry) => $enquiry->status->isOpen());
 
         return view('account.dashboard', [
             'stats' => [
@@ -26,44 +33,80 @@ class DashboardController extends Controller
                 'open' => $engagements->filter(fn (Engagement $engagement) => $engagement->status->isOpen())->count(),
                 'viewings' => $engagements->where('status', EngagementStatus::ViewingScheduled)->count(),
                 'closed' => $engagements->where('status', EngagementStatus::Closed)->count(),
+                'enquiries' => $enquiries->count(),
+                'openEnquiries' => $openEnquiries->count(),
             ],
             'activeEngagements' => $engagements->filter(fn (Engagement $engagement) => $engagement->status->isOpen())->take(3),
-            'activity' => $this->recentActivity($engagements),
+            'activeEnquiries' => $openEnquiries->take(3),
+            'interests' => collect(InterestArea::cases())->map(fn (InterestArea $area) => [
+                'area' => $area,
+                'total' => $enquiries->filter(fn (Enquiry $enquiry) => $enquiry->area() === $area)->count(),
+                'open' => $openEnquiries->filter(fn (Enquiry $enquiry) => $enquiry->area() === $area)->count(),
+            ]),
+            'activity' => $this->recentActivity($engagements, $enquiries),
             'recommended' => $this->recommendedProperties($engagements),
+            'opportunities' => $this->recommendedOpportunities($enquiries),
         ]);
     }
 
     /**
-     * Latest progress updates and engagements, newest first.
+     * Latest updates and actions on engagements and enquiries, newest first.
      *
      * @param  Collection<int, Engagement>  $engagements
-     * @return Collection<int, array{date: Carbon, status: EngagementStatus|null, title: string, body: ?string, engagement: Engagement}>
+     * @param  Collection<int, Enquiry>  $enquiries
+     * @return Collection<int, array{date: Carbon, label: string, badge: string, highlight: bool, title: string, body: ?string, url: string}>
      */
-    private function recentActivity(Collection $engagements): Collection
+    private function recentActivity(Collection $engagements, Collection $enquiries): Collection
     {
-        $byId = $engagements->keyBy('id');
+        $engagementsById = $engagements->keyBy('id');
+        $enquiriesById = $enquiries->keyBy('id');
 
-        $updates = EngagementUpdate::whereIn('engagement_id', $byId->keys())
-            ->latest()
-            ->take(8)
-            ->get()
+        $engagementUpdates = EngagementUpdate::whereIn('engagement_id', $engagementsById->keys())->latest()->take(8)->get()
             ->map(fn (EngagementUpdate $update) => [
                 'date' => $update->created_at,
-                'status' => $update->status,
-                'title' => $byId[$update->engagement_id]->property->title,
+                'label' => $update->status->label(),
+                'badge' => $update->status->badgeClasses(),
+                'highlight' => true,
+                'title' => $engagementsById[$update->engagement_id]->property->title,
                 'body' => $update->note ?: $update->status->description(),
-                'engagement' => $byId[$update->engagement_id],
+                'url' => route('account.engagements.show', $update->engagement_id),
             ]);
 
         $engaged = $engagements->map(fn (Engagement $engagement) => [
             'date' => $engagement->created_at,
-            'status' => null,
+            'label' => 'Engaged',
+            'badge' => 'bg-ink-50 text-ink-500 ring-ink-100',
+            'highlight' => false,
             'title' => $engagement->property->title,
             'body' => 'You engaged with this property.',
-            'engagement' => $engagement,
+            'url' => route('account.engagements.show', $engagement),
         ]);
 
-        return $updates->concat($engaged)->sortByDesc('date')->take(6)->values();
+        $enquiryUpdates = EnquiryUpdate::whereIn('enquiry_id', $enquiriesById->keys())->latest()->take(8)->get()
+            ->map(fn (EnquiryUpdate $update) => [
+                'date' => $update->created_at,
+                'label' => $update->status->clientLabel(),
+                'badge' => $update->status->badgeClasses(),
+                'highlight' => true,
+                'title' => $enquiriesById[$update->enquiry_id]->subject(),
+                'body' => $update->message ?: $update->status->description(),
+                'url' => route('account.enquiries.show', $update->enquiry_id),
+            ]);
+
+        $enquired = $enquiries->map(fn (Enquiry $enquiry) => [
+            'date' => $enquiry->created_at,
+            'label' => $enquiry->area()->label(),
+            'badge' => 'bg-ink-50 text-ink-500 ring-ink-100',
+            'highlight' => false,
+            'title' => $enquiry->subject(),
+            'body' => 'You sent an enquiry.',
+            'url' => route('account.enquiries.show', $enquiry),
+        ]);
+
+        return $engagementUpdates->concat($engaged)->concat($enquiryUpdates)->concat($enquired)
+            ->sortByDesc('date')
+            ->take(7)
+            ->values();
     }
 
     /**
@@ -90,5 +133,35 @@ class DashboardController extends Controller
             ->get();
 
         return $similar->isNotEmpty() ? $similar : $available()->take(3)->get();
+    }
+
+    /**
+     * Open land banking / investment opportunities matching the areas the client has asked about
+     * (land first when they've enquired about land), excluding ones they already enquired about.
+     *
+     * @param  Collection<int, Enquiry>  $enquiries
+     * @return Collection<int, InvestmentOpportunity>
+     */
+    private function recommendedOpportunities(Collection $enquiries): Collection
+    {
+        $areas = $enquiries->map(fn (Enquiry $enquiry) => $enquiry->area());
+        $alreadyAsked = $enquiries
+            ->filter(fn (Enquiry $enquiry) => $enquiry->enquirable instanceof InvestmentOpportunity)
+            ->map(fn (Enquiry $enquiry) => $enquiry->enquirable_id);
+
+        $query = InvestmentOpportunity::visible()
+            ->where('status', OpportunityStatus::Open)
+            ->whereNotIn('id', $alreadyAsked)
+            ->orderByDesc('is_featured')
+            ->latest('published_at');
+
+        $wantsLand = $areas->contains(InterestArea::LandBanking);
+        $wantsInvestments = $areas->contains(InterestArea::Investments);
+
+        if ($wantsLand xor $wantsInvestments) {
+            $query->when($wantsLand, fn ($query) => $query->land(), fn ($query) => $query->whereNot(fn ($query) => $query->land()));
+        }
+
+        return $query->take(3)->get();
     }
 }

@@ -1,5 +1,5 @@
 {{-- One advert spot on the page map. Expects: $page, $sectionKey, $sectionLabel, $position, $slotAdverts --}}
-<div class="rounded-2xl border border-dashed border-brass-300/70 bg-brass-50/40 p-4" data-admin-slot="{{ $sectionKey }}:{{ $position->value }}">
+<div class="rounded-2xl border border-dashed border-brass-300/70 bg-brass-50/40 p-4 backdrop-blur transition hover:border-brass-400 hover:bg-brass-50/70" data-admin-slot="{{ $sectionKey }}:{{ $position->value }}">
     <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="text-xs font-semibold tracking-wide text-brass-700 uppercase">
             {{ $position === \App\Enums\AdvertPosition::Inside ? 'Inside' : $position->label() }} · {{ $sectionLabel }}

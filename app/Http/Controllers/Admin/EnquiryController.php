@@ -9,6 +9,7 @@ use App\Models\Enquiry;
 use App\Models\EnquiryType;
 use App\Models\InvestmentOpportunity;
 use App\Models\Property;
+use App\Notifications\EnquiryProgressUpdated;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class EnquiryController extends Controller
 
     public function show(Enquiry $enquiry): View
     {
-        $enquiry->load(['enquirable', 'user', 'enquiryType']);
+        $enquiry->load(['enquirable', 'user', 'enquiryType', 'updates.author']);
 
         return view('admin.enquiries.show', [
             'enquiry' => $enquiry,
@@ -38,9 +39,27 @@ class EnquiryController extends Controller
 
     public function update(UpdateEnquiryRequest $request, Enquiry $enquiry): RedirectResponse
     {
-        $enquiry->update($request->validated());
+        $previousStatus = $enquiry->status;
+        $enquiry->update($request->safe()->only(['status', 'admin_notes']));
+        $message = $request->validated('client_message');
 
-        return back()->with('success', 'Enquiry updated.');
+        if ($enquiry->status === $previousStatus && blank($message)) {
+            return back()->with('success', 'Enquiry updated.');
+        }
+
+        $update = $enquiry->updates()->create([
+            'status' => $enquiry->status,
+            'message' => $message,
+            'user_id' => $request->user()->id,
+        ]);
+
+        if (! $enquiry->user) {
+            return back()->with('success', 'Enquiry updated. This is a guest enquiry, so let them know by email, phone or WhatsApp.');
+        }
+
+        $enquiry->user->notify(new EnquiryProgressUpdated($update));
+
+        return back()->with('success', "Enquiry updated and {$enquiry->name} has been notified.");
     }
 
     public function destroy(Enquiry $enquiry): RedirectResponse

@@ -1,6 +1,9 @@
 <x-layouts.app :title="$content['meta']->value('title')" :description="$content['meta']->value('description')">
+    <x-advert-slot :adverts="$adverts" at="hero:before" class="mt-6" />
     <x-page-hero :section="$content['hero']" />
+    <x-advert-slot :adverts="$adverts" at="hero:after" class="mt-12" />
 
+    <x-advert-slot :adverts="$adverts" at="opportunities:before" class="mt-20" />
     <section class="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Filter by category">
             <a href="{{ route('investments.index') }}" @class(['chip', 'chip-active' => ! $category, 'bg-white/50' => $category])>All</a>
@@ -26,7 +29,9 @@
             <div class="mt-12">{{ $opportunities->links('pagination') }}</div>
         @endif
     </section>
+    <x-advert-slot :adverts="$adverts" at="opportunities:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="how_it_works:before" class="mt-20" />
     {{-- How it works --}}
     @if ($content['how_it_works']->isShown())
     <section class="mx-auto mt-24 max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -47,7 +52,9 @@
         </div>
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="how_it_works:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="checklist:before" class="mt-20" />
     {{-- What you'll find + enquiry --}}
     @if ($content['checklist']->isShown())
     @php($checklist = $content['checklist'])
@@ -63,8 +70,11 @@
         <x-enquiry-form :type="\App\Models\EnquiryType::Investment" :title="$checklist->value('form_title')" :description="$checklist->value('form_description')" :opportunities="$openOpportunities" whatsapp-text="Hello, I'd like to know more about your investment opportunities." data-reveal />
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="checklist:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="cta:before" class="mt-20" />
     @if ($content['cta']->isShown())
         <x-cta-band class="mt-24" :title="$content['cta']->value('title')" :description="$content['cta']->value('description')" />
     @endif
+    <x-advert-slot :adverts="$adverts" at="cta:after" class="mt-16" />
 </x-layouts.app>

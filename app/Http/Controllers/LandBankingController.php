@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AdvertPage;
 use App\Enums\LandingPage;
 use App\Enums\OpportunityStatus;
+use App\Models\Advert;
 use App\Models\InvestmentOpportunity;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -25,6 +27,7 @@ class LandBankingController extends Controller
 
         return view('land-banking.index', [
             'content' => LandingPage::LandBanking->content(),
+            'adverts' => Advert::slotsFor(AdvertPage::LandBanking),
             'opportunities' => $opportunities,
             'filters' => $filters,
             'states' => InvestmentOpportunity::visible()->land()->whereNotNull('state')->distinct()->orderBy('state')->pluck('state'),

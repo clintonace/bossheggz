@@ -33,6 +33,11 @@
             @endforeach
         @endif
 
+        <button type="button" data-tour-start data-no-loader class="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-ink-700 transition hover:bg-ivory hover:text-ink-900">
+            <x-icon name="sparkles" class="size-4 text-brass-500" /> Take a tour
+            <span class="ml-auto rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold text-brass-700 ring-1 ring-brass-100 transition group-hover:bg-brass-100">1 min</span>
+        </button>
+
         <div class="my-1 h-px bg-ink-100"></div>
 
         <form method="POST" action="{{ route('account.appearance.update') }}" data-appearance-form class="px-3 py-2.5">

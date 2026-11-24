@@ -14,6 +14,9 @@
  *  - Show a block for some field values [data-show-for="field-name"][data-show-values="a,b"]
  *  - Send an enquiry form via WhatsApp  [data-whatsapp-compose] (+ optional [data-whatsapp-number] select)
  *  - Page CMS repeatable lists          [data-repeater] (+ [data-icon-select], [data-dirty-form])
+ *  - Guided site tour                   [data-site-tour] (+ [data-tour-start] buttons replay it)
+ *  - Branded preloader (public site)    [data-site-preloader]
+ *  - Checkbox pickers (Data manager)    [data-check-form] (+ [data-check-preset], [data-check-all], [data-confirm-word])
  */
 
 /* ------------------------------------------------------------------ */
@@ -139,6 +142,46 @@ window.addEventListener('pageshow', (event) => {
             button.disabled = false;
         });
     }
+});
+
+/* ------------------------------------------------------------------ */
+/* Branded preloader (public site): lifts away once the page has loaded */
+/* Pop-up adverts and the site tour wait for it via preloaderDone.      */
+/* ------------------------------------------------------------------ */
+const preloaderDone = new Promise((resolve) => {
+    const preloader = document.querySelector('[data-site-preloader]');
+    if (!preloader || !document.documentElement.classList.contains('is-preloading')) {
+        preloader?.remove();
+        resolve();
+        return;
+    }
+
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const minimum = calm ? 300 : 2200;
+    let finished = false;
+
+    const finish = () => {
+        if (finished) return;
+        finished = true;
+        const wait = Math.max(0, minimum - performance.now());
+        setTimeout(() => {
+            preloader.classList.add('is-leaving');
+            try {
+                sessionStorage.setItem('site-preloader-seen', '1');
+            } catch {
+                // Private mode: it will simply show again next visit.
+            }
+            setTimeout(() => {
+                document.documentElement.classList.remove('is-preloading');
+                preloader.remove();
+                resolve();
+            }, calm ? 50 : 850);
+        }, wait);
+    };
+
+    if (document.readyState === 'complete') finish();
+    else window.addEventListener('load', finish, { once: true });
+    setTimeout(finish, 4500); // Don't wait forever for slow images.
 });
 
 /* ------------------------------------------------------------------ */
@@ -513,7 +556,7 @@ if (popup) {
     });
 
     if (!alreadySeen()) {
-        setTimeout(open, 900);
+        preloaderDone.then(() => setTimeout(open, 900));
     }
 }
 
@@ -633,6 +676,12 @@ document.querySelectorAll('[data-site-manager]').forEach((manager) => {
             loadFont(key);
             sample.style.fontFamily = fonts[key].stack;
         });
+
+        root.dataset.glass = checked('glass') || 'frosted';
+        const ambient = manager.querySelector('[data-preview-ambient]');
+        if (ambient) ambient.hidden = !field('ambient')?.checked;
+        const strip = manager.querySelector('[data-preview-strip]');
+        if (strip) strip.hidden = !field('contact_strip')?.checked;
 
         const size = Number(field('font_size').value);
         zoom.style.zoom = String(size / 16);
@@ -781,4 +830,265 @@ document.querySelectorAll('[data-dirty-form]').forEach((form) => {
         event.preventDefault();
         event.returnValue = '';
     });
+});
+
+/* ------------------------------------------------------------------ */
+/* Guided site tour                                                    */
+/* ------------------------------------------------------------------ */
+const tourRoot = document.querySelector('[data-site-tour]');
+
+if (tourRoot) {
+    const steps = JSON.parse(tourRoot.dataset.steps || '[]');
+    const storageKey = `site-tour-seen-${tourRoot.dataset.area}`;
+    const spotlight = tourRoot.querySelector('[data-tour-spotlight]');
+    const card = tourRoot.querySelector('[data-tour-card]');
+    const title = tourRoot.querySelector('[data-tour-title]');
+    const body = tourRoot.querySelector('[data-tour-body]');
+    const counter = tourRoot.querySelector('[data-tour-counter]');
+    const dots = tourRoot.querySelector('[data-tour-dots]');
+    const back = tourRoot.querySelector('[data-tour-back]');
+    const next = tourRoot.querySelector('[data-tour-next]');
+    const nextLabel = tourRoot.querySelector('[data-tour-next-label]');
+    const gutter = 16;
+    const padding = 8;
+
+    let active = [];
+    let index = 0;
+    let isOpen = false;
+    let previousFocus = null;
+    let frame = null;
+
+    const isVisible = (element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
+    const findTarget = (selector) => (selector ? Array.from(document.querySelectorAll(selector)).find(isVisible) ?? null : null);
+
+    const hasSeen = () => {
+        try {
+            return localStorage.getItem(storageKey) === '1';
+        } catch {
+            return false;
+        }
+    };
+
+    const remember = () => {
+        try {
+            localStorage.setItem(storageKey, '1');
+        } catch {
+            // Private mode: the account (if signed in) still remembers it.
+        }
+        const url = tourRoot.dataset.completeUrl;
+        if (!url) return;
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        }).catch(() => {});
+    };
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+
+    const place = () => {
+        const step = active[index];
+        if (!step) return;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const cw = card.offsetWidth;
+        const ch = card.offsetHeight;
+
+        if (!step.element) {
+            spotlight.classList.add('is-centered');
+            Object.assign(spotlight.style, { top: `${vh / 2}px`, left: `${vw / 2}px`, width: '0px', height: '0px' });
+            Object.assign(card.style, { top: `${Math.max(gutter, (vh - ch) / 2)}px`, left: `${Math.max(gutter, (vw - cw) / 2)}px` });
+            return;
+        }
+
+        const rect = step.element.getBoundingClientRect();
+        const height = rect.height + padding * 2;
+        spotlight.classList.remove('is-centered');
+        Object.assign(spotlight.style, {
+            top: `${rect.top - padding}px`,
+            left: `${rect.left - padding}px`,
+            width: `${rect.width + padding * 2}px`,
+            height: `${height}px`,
+            borderRadius: `${Math.min(20, height / 2)}px`,
+        });
+
+        let top;
+        let left;
+        const below = rect.bottom + padding + gutter;
+        const above = rect.top - padding - gutter - ch;
+        const roomRight = vw - rect.right - padding - gutter;
+
+        if (vw >= 640 && rect.right < vw * 0.35 && roomRight > cw + gutter) {
+            // Sidebar items: sit beside them.
+            left = rect.right + padding + gutter;
+            top = clamp(rect.top + rect.height / 2 - ch / 2, gutter, vh - ch - gutter);
+        } else {
+            left = clamp(rect.left + rect.width / 2 - cw / 2, gutter, vw - cw - gutter);
+            if (below + ch <= vh - gutter) top = below;
+            else if (above >= gutter) top = above;
+            else top = vh - ch - gutter;
+        }
+
+        Object.assign(card.style, { top: `${top}px`, left: `${left}px` });
+    };
+
+    const schedulePlace = () => {
+        if (!isOpen) return;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(place);
+    };
+
+    const render = () => {
+        const step = active[index];
+        title.textContent = step.title;
+        body.textContent = step.body;
+        counter.textContent = active.length > 1 ? `Step ${index + 1} of ${active.length}` : 'Tour';
+        dots.innerHTML = active.map((_, dot) => `<span class="tour-dot${dot === index ? ' is-active' : ''}"></span>`).join('');
+        back.hidden = index === 0;
+        nextLabel.textContent = index === active.length - 1 ? 'Finish' : 'Next';
+    };
+
+    const show = (newIndex) => {
+        index = newIndex;
+        const step = active[index];
+        card.classList.add('is-changing');
+
+        let delay = 180;
+        if (step.element) {
+            const rect = step.element.getBoundingClientRect();
+            if (rect.top < 80 || rect.bottom > window.innerHeight - 40) {
+                const calm = document.documentElement.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                step.element.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+                delay = calm ? 60 : 420;
+            }
+        }
+
+        setTimeout(() => {
+            render();
+            place();
+            card.classList.remove('is-changing');
+            next.focus({ preventScroll: true });
+        }, delay);
+    };
+
+    const start = () => {
+        active = steps
+            .map((step) => ({ ...step, element: findTarget(step.target) }))
+            .filter((step) => !step.target || step.element);
+        if (active.length === 0) return;
+
+        closeAllToggles();
+        previousFocus = document.activeElement;
+        tourRoot.hidden = false;
+        isOpen = true;
+        show(0);
+    };
+
+    const end = () => {
+        if (!isOpen) return;
+        isOpen = false;
+        tourRoot.hidden = true;
+        remember();
+        previousFocus?.focus?.({ preventScroll: true });
+    };
+
+    next.addEventListener('click', () => (index < active.length - 1 ? show(index + 1) : end()));
+    back.addEventListener('click', () => index > 0 && show(index - 1));
+    tourRoot.querySelectorAll('[data-tour-skip], [data-tour-close]').forEach((button) => button.addEventListener('click', end));
+
+    document.addEventListener('keydown', (event) => {
+        if (!isOpen) return;
+        if (event.key === 'Escape') end();
+        if (event.key === 'ArrowRight') next.click();
+        if (event.key === 'ArrowLeft' && index > 0) show(index - 1);
+    });
+    window.addEventListener('resize', schedulePlace);
+    window.addEventListener('scroll', schedulePlace, { passive: true });
+    window.addEventListener('scrollend', schedulePlace);
+
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-tour-start]');
+        if (!button) return;
+        event.preventDefault();
+        closeAllToggles();
+        setTimeout(start, 150);
+    });
+
+    // "Preview tour" from the Site manager opens a page with ?tour=1.
+    if (new URLSearchParams(window.location.search).has('tour')) {
+        preloaderDone.then(() => setTimeout(start, 700));
+    }
+
+    // First view: wait for any pop-up advert to be closed before starting.
+    const shouldAutoStart = tourRoot.dataset.autoStart === '1' && !(tourRoot.dataset.guest === '1' && hasSeen()) && !new URLSearchParams(window.location.search).has('tour');
+    if (shouldAutoStart) {
+        const advertIsOpen = () => {
+            const advert = document.querySelector('[data-advert-popup]');
+            return advert && !advert.hidden;
+        };
+        let waited = 0;
+        const waitForPage = () => {
+            if (advertIsOpen() && waited < 120000) {
+                waited += 500;
+                setTimeout(waitForPage, 500);
+            } else if (!isOpen) {
+                start();
+            }
+        };
+        preloaderDone.then(() => setTimeout(waitForPage, 1600));
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Checkbox pickers: quick-select dropdown, select all, typed confirm  */
+/* ------------------------------------------------------------------ */
+document.querySelectorAll('[data-check-form]').forEach((form) => {
+    const boxes = () => Array.from(form.querySelectorAll('input[type="checkbox"][name="datasets[]"]'));
+    const counter = form.querySelector('[data-selected-count]');
+    const submit = form.querySelector('[data-check-submit]');
+    const confirmInput = form.querySelector('[data-confirm-word]');
+
+    const hint = form.querySelector('[data-check-hint]');
+
+    const refresh = () => {
+        const selected = boxes().filter((box) => box.checked).length;
+        if (counter) counter.textContent = String(selected);
+        // Compare case-insensitively: the field displays capitals whatever is typed.
+        const confirmed = !confirmInput || confirmInput.value.trim().toUpperCase() === confirmInput.dataset.confirmWord;
+        if (submit) submit.disabled = selected === 0 || !confirmed;
+        if (hint) {
+            hint.textContent = selected === 0
+                ? 'Tick at least one item above to delete.'
+                : !confirmed
+                  ? `Type ${confirmInput.dataset.confirmWord} in the box to unlock the button.`
+                  : `Ready: ${selected} ${selected === 1 ? 'item' : 'items'} will be deleted.`;
+            hint.classList.toggle('text-rose-600', selected > 0 && confirmed);
+        }
+    };
+
+    form.querySelector('[data-check-preset]')?.addEventListener('change', (event) => {
+        const value = event.target.value;
+        if (!value) return;
+        const wanted = value === 'none' ? [] : value.split(',');
+        boxes().forEach((box) => (box.checked = wanted.includes(box.value)));
+        event.target.value = '';
+        refresh();
+    });
+
+    form.querySelectorAll('[data-check-all]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const group = boxes().filter((box) => box.dataset.group === button.dataset.checkAll);
+            const allChecked = group.every((box) => box.checked);
+            group.forEach((box) => (box.checked = !allChecked));
+            refresh();
+        });
+    });
+
+    form.addEventListener('change', refresh);
+    confirmInput?.addEventListener('input', refresh);
+    refresh();
 });

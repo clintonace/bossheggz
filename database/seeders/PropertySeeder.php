@@ -12,7 +12,7 @@ use Illuminate\Database\Seeder;
 class PropertySeeder extends Seeder
 {
     /**
-     * Seed a set of demo listings that use remote placeholder photography.
+     * Seed a set of demo listings that use remote placeholder photography (skips listings that already exist).
      */
     public function run(): void
     {
@@ -96,6 +96,10 @@ class PropertySeeder extends Seeder
         foreach ($listings as $index => $listing) {
             $images = $listing['images'];
             unset($listing['images']);
+
+            if (Property::where('title', $listing['title'])->exists()) {
+                continue;
+            }
 
             $property = Property::create([
                 'status' => PropertyStatus::Published,

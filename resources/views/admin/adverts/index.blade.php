@@ -1,10 +1,6 @@
 @php
     $viewOptions = ['all' => 'All adverts', ...collect(\App\Enums\AdvertPage::cases())->mapWithKeys(fn ($advertPage) => [$advertPage->value => $advertPage->label()])->all(), 'popup' => 'Pop-up adverts'];
-    $pageUrl = match ($page) {
-        \App\Enums\AdvertPage::Home => route('home'),
-        \App\Enums\AdvertPage::Listings, \App\Enums\AdvertPage::Property => route('properties.index'),
-        default => null,
-    };
+    $pageUrl = $page?->url();
 @endphp
 
 <x-layouts.admin title="Adverts" subtitle="Promote partners, products and offers across the website.">
@@ -53,9 +49,9 @@
                         @endif
                     @endforeach
 
-                    <li class="rounded-2xl bg-ink-50 px-5 py-5 ring-1 ring-ink-100">
+                    <li class="rounded-2xl bg-gradient-to-br from-white/90 to-ivory/70 px-5 py-5 shadow-xs ring-1 ring-ink-100 backdrop-blur">
                         <div class="flex items-center gap-3">
-                            <span class="grid size-8 place-items-center rounded-lg bg-white text-xs font-semibold text-ink-400 ring-1 ring-ink-100">{{ $loop->iteration }}</span>
+                            <span class="grid size-8 place-items-center rounded-lg bg-ink-900 font-display text-xs text-brass-300">{{ $loop->iteration }}</span>
                             <p class="font-semibold text-ink-700">{{ $section['label'] }}</p>
                             <span class="hidden flex-1 space-y-1.5 sm:block" aria-hidden="true"><span class="ml-auto block h-1.5 w-2/3 rounded-full bg-ink-100"></span><span class="ml-auto block h-1.5 w-1/3 rounded-full bg-ink-100"></span></span>
                         </div>

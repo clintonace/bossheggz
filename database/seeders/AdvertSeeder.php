@@ -58,6 +58,15 @@ class AdvertSeeder extends Seeder
                 ...$inline(AdvertPage::Listings, 'grid', AdvertPosition::After, AdvertWidth::Half, 1),
             ],
             [
+                'title' => 'Fly business class for less',
+                'sponsor' => 'Skyward Travel (demo)',
+                'body' => 'Lie-flat seats and lounge access on selected routes this season.',
+                'cta_label' => 'See fares',
+                'link_url' => 'https://example.com/skyward-travel',
+                'image' => $photo('1436491865332-7a61a109cc05'),
+                ...$inline(AdvertPage::Investments, 'how_it_works', AdvertPosition::After, AdvertWidth::Full),
+            ],
+            [
                 'title' => 'Lakeside boat tours',
                 'sponsor' => 'Bluewater Tours (demo)',
                 'body' => 'Sunrise and sunset cruises every day. Kids ride free.',

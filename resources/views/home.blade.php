@@ -33,7 +33,7 @@
                 @endif
 
                 {{-- Search --}}
-                <form action="{{ route('properties.index') }}" method="GET" class="glass-strong mt-10 animate-fade-up rounded-3xl p-2 [animation-delay:240ms]">
+                <form action="{{ route('properties.index') }}" method="GET" data-tour="property-search" class="glass-strong mt-10 animate-fade-up rounded-3xl p-2 [animation-delay:240ms]">
                     <div class="flex flex-wrap gap-1 p-1">
                         @foreach (['' => 'All', 'sale' => 'Buy', 'rent' => 'Rent', 'shortlet' => 'Shortlet', 'lease' => 'Lease'] as $value => $label)
                             <label class="cursor-pointer">

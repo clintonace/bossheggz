@@ -3,6 +3,9 @@
 @php
     $engagementFilter = request()->routeIs('account.engagements.index') ? request('filter', 'all') : null;
     $notificationFilter = request()->routeIs('account.notifications.index') ? request('filter', 'all') : null;
+    $onEnquiries = request()->routeIs('account.enquiries.index');
+    $enquiryArea = $onEnquiries ? request('area') : null;
+    $enquiryFilter = $onEnquiries ? request('filter') : null;
     $nav = [
         ['label' => 'Overview', 'icon' => 'grid', 'url' => route('account.index'), 'active' => request()->routeIs('account.index')],
         [
@@ -12,6 +15,19 @@
                 ['label' => 'In progress', 'icon' => 'trending', 'url' => route('account.engagements.index', ['filter' => 'open']), 'active' => $engagementFilter === 'open', 'badge' => $openEngagementsCount],
                 ['label' => 'Completed', 'icon' => 'check-circle', 'url' => route('account.engagements.index', ['filter' => 'completed']), 'active' => $engagementFilter === 'completed'],
                 ['label' => 'Engage with a property', 'icon' => 'plus', 'action' => true, 'url' => route('properties.index'), 'active' => false],
+            ],
+        ],
+        [
+            'group' => 'nav-my-enquiries', 'label' => 'My enquiries', 'icon' => 'message', 'badge' => $openEnquiriesCount,
+            'links' => [
+                ['label' => 'All enquiries', 'icon' => 'message', 'url' => route('account.enquiries.index'), 'active' => ($onEnquiries && ! $enquiryArea && ! $enquiryFilter) || request()->routeIs('account.enquiries.show')],
+                ...collect(\App\Enums\InterestArea::cases())->map(fn ($interestArea) => [
+                    'label' => $interestArea->label(),
+                    'url' => route('account.enquiries.index', ['area' => $interestArea->value]),
+                    'active' => $enquiryArea === $interestArea->value && ! $enquiryFilter,
+                ])->all(),
+                ['label' => 'In progress', 'url' => route('account.enquiries.index', ['filter' => 'open']), 'active' => ! $enquiryArea && $enquiryFilter === 'open', 'badge' => $openEnquiriesCount],
+                ['label' => 'Send an enquiry', 'icon' => 'plus', 'action' => true, 'url' => route('contact', ['type' => 'consultation']), 'active' => false],
             ],
         ],
         [
@@ -35,10 +51,11 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-mode="{{ $colorMode }}" data-motion="{{ $siteTheme->animationsEnabled() ? 'full' : 'reduced' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-mode="{{ $colorMode }}" data-motion="{{ $siteTheme->animationsEnabled() ? 'full' : 'reduced' }}" data-glass="{{ $siteTheme->glassStyle() }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="robots" content="noindex">
         <title>{{ $title }} · {{ config('listings.company.name') }}</title>
         @fonts
@@ -47,6 +64,7 @@
     </head>
     <body class="min-h-screen font-sans antialiased">
         <x-page-loader />
+        <x-site-tour :area="\App\Enums\SiteArea::Client" :theme="$siteTheme" />
         <x-flash />
         @if (config('listings.dev_account_switcher'))
             <x-dev-account-switcher />
@@ -54,10 +72,12 @@
 
         {{-- Sidebar --}}
         <aside id="client-sidebar" data-toggle-panel @if ($sidebarPalette = $siteTheme->sidebarPalette()) data-palette="{{ $sidebarPalette }}" @endif class="fixed inset-y-0 left-0 z-50 hidden w-72 flex-col border-r border-ink-100 bg-white text-ink-800 shadow-2xl lg:flex lg:shadow-none [&.is-open]:flex">
-            <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-                <div class="absolute -top-24 -left-20 size-72 rounded-full bg-brass-100/70 blur-3xl"></div>
-                <div class="absolute top-1/2 -right-28 size-72 rounded-full bg-ink-100/80 blur-3xl"></div>
-            </div>
+            @if ($siteTheme->ambientEnabled())
+                <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+                    <div class="absolute -top-24 -left-20 size-72 rounded-full bg-brass-100/70 blur-3xl"></div>
+                    <div class="absolute top-1/2 -right-28 size-72 rounded-full bg-ink-100/80 blur-3xl"></div>
+                </div>
+            @endif
             <div class="flex h-20 items-center px-6">
                 <x-logo />
             </div>
@@ -135,6 +155,7 @@
                             auth()->user()->isAdmin() ? ['label' => 'Admin dashboard', 'icon' => 'shield', 'url' => route('admin.dashboard')] : null,
                             ['label' => 'Overview', 'icon' => 'grid', 'url' => route('account.index')],
                             ['label' => 'My engagements', 'icon' => 'inbox', 'url' => route('account.engagements.index')],
+                            ['label' => 'My enquiries', 'icon' => 'message', 'url' => route('account.enquiries.index')],
                             ['label' => 'Profile & security', 'icon' => 'user', 'url' => route('account.profile.edit')],
                             ['label' => 'Browse properties', 'icon' => 'search', 'url' => route('properties.index')],
                         ]))" />

@@ -15,7 +15,7 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-mode="{{ $colorMode }}" data-motion="{{ $siteTheme->animationsEnabled() ? 'full' : 'reduced' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-mode="{{ $colorMode }}" data-motion="{{ $siteTheme->animationsEnabled() ? 'full' : 'reduced' }}" data-glass="{{ $siteTheme->glassStyle() }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -27,14 +27,20 @@
         <x-site-theme :theme="$siteTheme" />
     </head>
     <body class="min-h-screen font-sans antialiased">
-        {{-- Ambient colour behind the glass surfaces --}}
-        <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-            <div class="absolute -top-48 -left-40 size-[42rem] rounded-full bg-brass-200/45 blur-[120px]"></div>
-            <div class="absolute top-1/3 -right-48 size-[38rem] rounded-full bg-ink-200/50 blur-[120px]"></div>
-            <div class="absolute -bottom-48 left-1/4 size-[34rem] rounded-full bg-brass-100/60 blur-[120px]"></div>
-        </div>
+        @if ($siteTheme->preloaderEnabled())
+            <x-site-preloader />
+        @endif
+        {{-- Ambient colour behind the glass surfaces (Site manager → Background glow) --}}
+        @if ($siteTheme->ambientEnabled())
+            <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+                <div class="absolute -top-48 -left-40 size-[42rem] rounded-full bg-brass-200/45 blur-[120px]"></div>
+                <div class="absolute top-1/3 -right-48 size-[38rem] rounded-full bg-ink-200/50 blur-[120px]"></div>
+                <div class="absolute -bottom-48 left-1/4 size-[34rem] rounded-full bg-brass-100/60 blur-[120px]"></div>
+            </div>
+        @endif
 
         <x-page-loader />
+        <x-site-tour :area="\App\Enums\SiteArea::Landing" :theme="$siteTheme" />
         <x-flash />
         @if ($popupAdvert)
             <x-advert-popup :advert="$popupAdvert" />
@@ -43,7 +49,8 @@
             <x-dev-account-switcher />
         @endif
 
-        {{-- Contact strip --}}
+        {{-- Contact strip (Site manager → Contact strip) --}}
+        @if ($siteTheme->showsContactStrip())
         <div data-palette="normal" class="hidden bg-ink-950 text-xs text-ink-300 md:block">
             <div class="mx-auto flex h-10 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-5">
@@ -53,16 +60,17 @@
                 </div>
                 <div class="flex items-center gap-5">
                     <span class="hidden text-ink-400 lg:inline">{{ $company['tagline'] }}</span>
-                    <a href="{{ route('contact', ['type' => 'list_property']) }}" class="inline-flex items-center gap-1.5 font-semibold text-brass-300 transition hover:text-brass-200"><x-icon name="plus" class="size-3.5" /> List Your Property</a>
+                    <a href="{{ route('contact', ['type' => 'list_property']) }}" data-tour="list-property" class="inline-flex items-center gap-1.5 font-semibold text-brass-300 transition hover:text-brass-200"><x-icon name="plus" class="size-3.5" /> List Your Property</a>
                 </div>
             </div>
         </div>
+        @endif
 
         <header data-sticky-header class="group/header sticky top-0 z-40 border-b border-white/40 bg-ivory/55 backdrop-blur-2xl backdrop-saturate-150 transition-[border-color,box-shadow,background-color] duration-300 [&.is-scrolled]:border-ink-100/70 [&.is-scrolled]:bg-ivory/70 [&.is-scrolled]:shadow-[0_8px_30px_-12px_rgb(18_24_37/0.14)]">
             <div class="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
                 <x-logo />
 
-                <nav class="hidden items-center gap-0.5 xl:flex" aria-label="Main">
+                <nav data-tour="main-nav" class="hidden items-center gap-0.5 xl:flex" aria-label="Main">
                     @foreach ($links as $link)
                         <a href="{{ $link['url'] }}" @class([
                             'rounded-full px-3 py-2 text-[13px] font-medium whitespace-nowrap transition',
@@ -80,13 +88,14 @@
                             auth()->user()->isAdmin() ? ['label' => 'Admin dashboard', 'icon' => 'shield', 'url' => route('admin.dashboard')] : null,
                             ['label' => 'My dashboard', 'icon' => 'grid', 'url' => route('account.index')],
                             ['label' => 'My engagements', 'icon' => 'inbox', 'url' => route('account.engagements.index')],
+                            ['label' => 'My enquiries', 'icon' => 'message', 'url' => route('account.enquiries.index')],
                             ['label' => 'Profile & security', 'icon' => 'user', 'url' => route('account.profile.edit')],
                         ]))" />
                     @else
-                        <a href="{{ route('login') }}" class="btn btn-ghost hidden sm:inline-flex">Sign in</a>
+                        <a href="{{ route('login') }}" data-tour="sign-in" class="btn btn-ghost hidden sm:inline-flex">Sign in</a>
                     @endauth
 
-                    <a href="{{ route('contact', ['type' => 'consultation']) }}" class="btn btn-primary hidden sm:inline-flex">Speak to an Adviser</a>
+                    <a href="{{ route('contact', ['type' => 'consultation']) }}" data-tour="adviser" class="btn btn-primary hidden sm:inline-flex">Speak to an Adviser</a>
 
                     <button type="button" data-toggle="#mobile-nav" aria-expanded="false" class="grid size-10 place-items-center rounded-full text-ink-700 hover:bg-white/60 xl:hidden" aria-label="Open menu">
                         <x-icon name="menu" />
@@ -160,7 +169,10 @@
                 </div>
                 <div class="mt-14 flex flex-col justify-between gap-4 border-t border-white/10 pt-8 text-xs text-ink-500 sm:flex-row">
                     <p>&copy; {{ date('Y') }} {{ $company['legal_name'] }}. All rights reserved.</p>
-                    <p>{{ $company['tagline'] }}</p>
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <button type="button" data-tour-start data-no-loader class="inline-flex items-center gap-1.5 transition hover:text-white"><x-icon name="sparkles" class="size-3.5" /> Take a tour</button>
+                        <p>{{ $company['tagline'] }}</p>
+                    </div>
                 </div>
             </div>
         </footer>

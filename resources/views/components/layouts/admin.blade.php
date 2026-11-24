@@ -92,6 +92,11 @@
             'active' => request()->routeIs('admin.pages.edit') && request()->route('page') === $landingPage,
         ])->all(),
     ];
+    $dataLinks = [
+        ['label' => 'Overview', 'icon' => 'grid', 'url' => route('admin.data.index'), 'active' => request()->routeIs('admin.data.index')],
+        ['label' => 'Seed demo data', 'icon' => 'sparkles', 'url' => route('admin.data.seed'), 'active' => request()->routeIs('admin.data.seed')],
+        ['label' => 'Delete data', 'icon' => 'trash', 'url' => route('admin.data.delete'), 'active' => request()->routeIs('admin.data.delete')],
+    ];
     $siteLinks = collect(\App\Enums\SiteArea::cases())->map(fn ($siteArea) => [
         'label' => $siteArea->label(),
         'url' => route('admin.site.edit', $siteArea),
@@ -100,10 +105,11 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-mode="{{ $colorMode }}" data-motion="{{ $siteTheme->animationsEnabled() ? 'full' : 'reduced' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-mode="{{ $colorMode }}" data-motion="{{ $siteTheme->animationsEnabled() ? 'full' : 'reduced' }}" data-glass="{{ $siteTheme->glassStyle() }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="robots" content="noindex">
         <title>{{ $title }} · Admin · {{ config('listings.company.name') }}</title>
         @fonts
@@ -112,6 +118,7 @@
     </head>
     <body class="min-h-screen bg-ivory font-sans text-ink-800 antialiased">
         <x-page-loader />
+        <x-site-tour :area="\App\Enums\SiteArea::Admin" :theme="$siteTheme" />
         <x-flash />
         @if (config('listings.dev_account_switcher'))
             <x-dev-account-switcher />
@@ -119,10 +126,12 @@
 
         {{-- Sidebar (designed light; follows light/dark mode unless pinned in the Site manager) --}}
         <aside id="admin-sidebar" data-toggle-panel @if ($sidebarPalette = $siteTheme->sidebarPalette()) data-palette="{{ $sidebarPalette }}" @endif class="fixed inset-y-0 left-0 z-50 hidden w-72 flex-col border-r border-ink-100 bg-white text-ink-800 shadow-2xl lg:flex lg:shadow-none [&.is-open]:flex">
-            <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-                <div class="absolute -top-24 -left-20 size-72 rounded-full bg-brass-100/70 blur-3xl"></div>
-                <div class="absolute top-1/2 -right-28 size-72 rounded-full bg-ink-100/80 blur-3xl"></div>
-            </div>
+            @if ($siteTheme->ambientEnabled())
+                <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+                    <div class="absolute -top-24 -left-20 size-72 rounded-full bg-brass-100/70 blur-3xl"></div>
+                    <div class="absolute top-1/2 -right-28 size-72 rounded-full bg-ink-100/80 blur-3xl"></div>
+                </div>
+            @endif
             <div class="flex h-20 items-center justify-between px-6">
                 <x-logo />
                 <span class="rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-bold tracking-widest text-brass-700 uppercase ring-1 ring-brass-200">Admin</span>
@@ -149,6 +158,9 @@
                 <x-nav-group id="nav-pages" label="Pages" icon="file" :links="$pageLinks" :open="request()->routeIs('admin.pages.*')" />
                 <x-nav-group id="nav-adverts" label="Adverts" icon="megaphone" :links="$advertLinks" :open="request()->routeIs('admin.adverts.*')" />
                 <x-nav-group id="nav-site" label="Site manager" icon="sliders" :links="$siteLinks" />
+
+                <p class="px-3 pt-8 pb-2 text-[11px] font-semibold tracking-[0.2em] text-ink-300 uppercase">System</p>
+                <x-nav-group id="nav-data" label="Data manager" icon="grid" :links="$dataLinks" :open="request()->routeIs('admin.data.*')" />
 
                 <p class="px-3 pt-8 pb-2 text-[11px] font-semibold tracking-[0.2em] text-ink-300 uppercase">Quick actions</p>
                 <a href="{{ route('admin.properties.create') }}" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 transition hover:bg-ivory hover:text-ink-900">

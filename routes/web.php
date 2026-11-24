@@ -14,6 +14,7 @@ use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\LandBankingController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\TourController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -50,10 +51,14 @@ Route::post('/dev/switch-account/{user}', DevAccountSwitchController::class)->na
 
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
+Route::post('/tour/{area}', TourController::class)->middleware(['auth', 'throttle:30,1'])->name('tour.complete');
+
 Route::middleware('auth')->prefix('account')->name('account.')->group(function () {
     Route::get('/', Account\DashboardController::class)->name('index');
     Route::get('/engagements', [Account\EngagementController::class, 'index'])->name('engagements.index');
     Route::get('/engagements/{engagement}', [Account\EngagementController::class, 'show'])->name('engagements.show');
+    Route::get('/enquiries', [Account\EnquiryController::class, 'index'])->name('enquiries.index');
+    Route::get('/enquiries/{enquiry}', [Account\EnquiryController::class, 'show'])->name('enquiries.show');
     Route::get('/notifications', [Account\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [Account\NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::get('/notifications/{notification}', [Account\NotificationController::class, 'show'])->name('notifications.show');
@@ -88,6 +93,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/pages/{page}', [Admin\PageContentController::class, 'edit'])->name('pages.edit');
     Route::put('/pages/{page}', [Admin\PageContentController::class, 'update'])->name('pages.update');
     Route::delete('/pages/{page}/sections/{section}', [Admin\PageContentController::class, 'reset'])->name('pages.reset');
+
+    Route::get('/data', [Admin\DataManagerController::class, 'index'])->name('data.index');
+    Route::get('/data/seed', [Admin\DataManagerController::class, 'seedForm'])->name('data.seed');
+    Route::post('/data/seed', [Admin\DataManagerController::class, 'seed'])->middleware('throttle:10,1')->name('data.seed.store');
+    Route::get('/data/delete', [Admin\DataManagerController::class, 'deleteForm'])->name('data.delete');
+    Route::delete('/data', [Admin\DataManagerController::class, 'destroy'])->middleware('throttle:10,1')->name('data.destroy');
 
     Route::redirect('/site', '/admin/site/landing')->name('site.index');
     Route::get('/site/{area}', [Admin\SiteSettingController::class, 'edit'])->name('site.edit');

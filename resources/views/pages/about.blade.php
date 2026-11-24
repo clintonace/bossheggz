@@ -6,8 +6,11 @@
 @endphp
 
 <x-layouts.app :title="$content['meta']->value('title')" :description="$content['meta']->value('description')">
+    <x-advert-slot :adverts="$adverts" at="hero:before" class="mt-6" />
     <x-page-hero :section="$content['hero']" />
+    <x-advert-slot :adverts="$adverts" at="hero:after" class="mt-12" />
 
+    <x-advert-slot :adverts="$adverts" at="overview:before" class="mt-20" />
     @if ($overview->isShown())
     <section @class(['mx-auto mt-20 grid max-w-7xl grid-cols-1 items-center gap-12 px-4 sm:px-6 lg:px-8', 'lg:grid-cols-2' => $overviewImage])>
         <div data-reveal>
@@ -34,7 +37,9 @@
         @endif
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="overview:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="mission:before" class="mt-20" />
     @if ($mission->isShown())
     <section class="mx-auto mt-24 grid max-w-7xl grid-cols-1 gap-6 px-4 sm:px-6 md:grid-cols-2 lg:px-8">
         <div class="glass-strong rounded-[2rem] p-8 sm:p-10" data-reveal>
@@ -47,7 +52,9 @@
         </div>
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="mission:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="values:before" class="mt-20" />
     @if ($content['values']->isShown())
     <section class="mx-auto mt-24 max-w-7xl px-4 sm:px-6 lg:px-8">
         <x-section-heading :section="$content['values']" size="md" data-reveal />
@@ -61,7 +68,9 @@
         </div>
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="values:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="growth:before" class="mt-20" />
     @if ($growth->isShown())
     <section class="mx-auto mt-24 max-w-7xl px-4 sm:px-6 lg:px-8">
         <div data-palette="normal" class="relative isolate overflow-hidden rounded-[2.5rem] bg-ink-950 px-6 py-16 text-white sm:px-12 lg:px-16">
@@ -88,8 +97,11 @@
         </div>
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="growth:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="cta:before" class="mt-20" />
     @if ($content['cta']->isShown())
         <x-cta-band class="mt-24" :title="$content['cta']->value('title')" :description="$content['cta']->value('description')" />
     @endif
+    <x-advert-slot :adverts="$adverts" at="cta:after" class="mt-16" />
 </x-layouts.app>

@@ -3,11 +3,15 @@
 namespace App\Models;
 
 use App\Enums\EnquiryStatus;
+use App\Enums\InterestArea;
+use App\Enums\OpportunityStatus;
 use Database\Factories\EnquiryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[Fillable(['user_id', 'enquiry_type_id', 'status', 'name', 'email', 'phone', 'interest', 'message', 'admin_notes'])]
@@ -74,5 +78,55 @@ class Enquiry extends Model
     public function subject(): string
     {
         return collect([$this->enquirable?->title, $this->interest])->filter()->implode(' — ') ?: $this->typeLabel();
+    }
+
+    /**
+     * Progress updates from the team, newest first.
+     *
+     * @return HasMany<EnquiryUpdate, $this>
+     */
+    public function updates(): HasMany
+    {
+        return $this->hasMany(EnquiryUpdate::class)->latest()->latest('id');
+    }
+
+    /**
+     * @return HasOne<EnquiryUpdate, $this>
+     */
+    public function latestUpdate(): HasOne
+    {
+        return $this->hasOne(EnquiryUpdate::class)->latestOfMany();
+    }
+
+    /**
+     * Land banking, investments, properties or advice.
+     */
+    public function area(): InterestArea
+    {
+        return InterestArea::forEnquiry($this);
+    }
+
+    /**
+     * Photo of the property or opportunity the enquiry is about, if any.
+     */
+    public function subjectImageUrl(): ?string
+    {
+        return match (true) {
+            $this->enquirable instanceof InvestmentOpportunity => $this->enquirable->image_url,
+            $this->enquirable instanceof Property => $this->enquirable->cover_url,
+            default => null,
+        };
+    }
+
+    /**
+     * Public page of the property or opportunity, while it is still listed.
+     */
+    public function subjectUrl(): ?string
+    {
+        return match (true) {
+            $this->enquirable instanceof InvestmentOpportunity && $this->enquirable->status !== OpportunityStatus::Draft => $this->enquirable->url(),
+            $this->enquirable instanceof Property && $this->enquirable->status->isPublic() => route('properties.show', $this->enquirable),
+            default => null,
+        };
     }
 }

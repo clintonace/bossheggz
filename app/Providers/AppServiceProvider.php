@@ -56,14 +56,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         View::composer('components.layouts.app', function (ViewInstance $view): void {
-            $page = match (true) {
-                request()->routeIs('home') => AdvertPage::Home,
-                request()->routeIs('properties.index') => AdvertPage::Listings,
-                request()->routeIs('properties.show') => AdvertPage::Property,
-                default => null,
-            };
-
-            $view->with('popupAdvert', Advert::popupFor($page));
+            $view->with('popupAdvert', Advert::popupFor(AdvertPage::forCurrentRoute()));
         });
 
         View::composer('components.dev-account-switcher', function (ViewInstance $view): void {
@@ -74,7 +67,12 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer('components.layouts.client', function (ViewInstance $view): void {
-            $view->with('openEngagementsCount', auth()->user()?->engagements()->open()->count() ?? 0);
+            $user = auth()->user();
+
+            $view->with([
+                'openEngagementsCount' => $user?->engagements()->open()->count() ?? 0,
+                'openEnquiriesCount' => $user?->enquiries()->whereNotIn('status', [EnquiryStatus::Converted, EnquiryStatus::Closed])->count() ?? 0,
+            ]);
         });
 
         View::composer('components.layouts.admin', function (ViewInstance $view): void {

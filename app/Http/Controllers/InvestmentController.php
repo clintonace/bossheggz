@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AdvertPage;
 use App\Enums\InvestmentCategory;
 use App\Enums\LandingPage;
 use App\Enums\OpportunityStatus;
+use App\Models\Advert;
 use App\Models\InvestmentOpportunity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +28,7 @@ class InvestmentController extends Controller
 
         return view('investments.index', [
             'content' => LandingPage::Investments->content(),
+            'adverts' => Advert::slotsFor(AdvertPage::Investments),
             'opportunities' => $opportunities,
             'category' => $category,
             'openOpportunities' => InvestmentOpportunity::where('status', OpportunityStatus::Open)->orderBy('title')->get(['id', 'title', 'slug']),

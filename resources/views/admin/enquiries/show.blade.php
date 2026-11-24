@@ -48,8 +48,14 @@
             </section>
 
             <section class="card animate-fade-up p-6 [animation-delay:60ms] sm:p-8">
-                <h2 class="font-display text-xl text-ink-900">Status and internal notes</h2>
-                <p class="mt-1 text-sm text-ink-400">Notes are only visible to admins.</p>
+                <h2 class="font-display text-xl text-ink-900">Progress</h2>
+                <p class="mt-1 text-sm text-ink-400">
+                    @if ($enquiry->user)
+                        Changing the status or writing a message notifies {{ str($enquiry->name)->before(' ') }} in their dashboard and by email. Internal notes stay private.
+                    @else
+                        Guest enquiry — they don't have a dashboard, so follow up by email, phone or WhatsApp. Internal notes stay private.
+                    @endif
+                </p>
 
                 <form method="POST" action="{{ route('admin.enquiries.update', $enquiry) }}" class="mt-6 space-y-5">
                     @csrf
@@ -68,11 +74,43 @@
                         </div>
                         @error('status') <p class="field-error">{{ $message }}</p> @enderror
                     </div>
-                    <x-field name="admin_notes" label="Internal notes" textarea rows="5" :value="$enquiry->admin_notes" placeholder="e.g. Called on Monday — wants a site visit to Asaba next week." />
+                    @if ($enquiry->user)
+                        <x-field name="client_message" label="Message to the client (optional)" textarea rows="3" :value="null" maxlength="2000" placeholder="e.g. Thanks for your interest — I've emailed the survey plan and title documents for the Asaba plots." hint="Shown on their enquiry timeline and included in the email." />
+                    @endif
+                    <x-field name="admin_notes" label="Internal notes" textarea rows="4" :value="$enquiry->admin_notes" placeholder="e.g. Called on Monday — wants a site visit to Asaba next week." />
                     <div class="flex justify-end">
-                        <button class="btn btn-primary" data-loading-text="Saving…"><x-icon name="check" class="size-4" /> Save</button>
+                        <button class="btn btn-primary" data-loading-text="Saving…"><x-icon name="check" class="size-4" /> {{ $enquiry->user ? 'Save & notify' : 'Save' }}</button>
                     </div>
                 </form>
+            </section>
+
+            <section class="card animate-fade-up p-6 [animation-delay:90ms] sm:p-8">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-display text-xl text-ink-900">Timeline</h2>
+                    <span class="text-xs text-ink-400">{{ $enquiry->user ? 'What the client sees' : 'Guest · not visible to them' }}</span>
+                </div>
+                <ol class="relative mt-6 space-y-6 border-l border-ink-100 pl-6">
+                    @foreach ($enquiry->updates as $update)
+                        <li class="relative">
+                            <span @class(['absolute top-1.5 -left-[29px] size-2.5 rounded-full ring-4 ring-white', 'bg-brass-500' => $loop->first, 'bg-ink-200' => ! $loop->first])></span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <x-status-badge :status="$update->status" />
+                                <time class="text-xs text-ink-400">{{ $update->created_at->format('M j, Y · g:i A') }}</time>
+                                @if ($update->author)
+                                    <span class="text-xs text-ink-400">by {{ $update->author->name }}</span>
+                                @endif
+                            </div>
+                            @if ($update->message)
+                                <p class="mt-2 rounded-2xl bg-ivory px-4 py-3 text-sm text-ink-700 ring-1 ring-ink-100">{{ $update->message }}</p>
+                            @endif
+                        </li>
+                    @endforeach
+                    <li class="relative">
+                        <span class="absolute top-1.5 -left-[29px] size-2.5 rounded-full bg-ink-200 ring-4 ring-white"></span>
+                        <p class="text-sm font-medium text-ink-700">Enquiry received</p>
+                        <time class="text-xs text-ink-400">{{ $enquiry->created_at->format('M j, Y · g:i A') }}</time>
+                    </li>
+                </ol>
             </section>
         </div>
 

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AdvertPage;
 use App\Enums\ArticleCategory;
 use App\Enums\LandingPage;
+use App\Models\Advert;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,6 +29,7 @@ class ArticleController extends Controller
 
         return view('insights.index', [
             'content' => LandingPage::Insights->content(),
+            'adverts' => Advert::slotsFor(AdvertPage::Insights),
             'featured' => $featured,
             'articles' => $articles,
             'category' => $category,

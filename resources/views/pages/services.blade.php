@@ -4,10 +4,13 @@
 @endphp
 
 <x-layouts.app :title="$content['meta']->value('title')" :description="$content['meta']->value('description')">
+    <x-advert-slot :adverts="$adverts" at="hero:before" class="mt-6" />
     <x-page-hero :section="$content['hero']">
         <x-whatsapp-button class="btn-lg bg-white/10 text-white ring-1 ring-white/25 backdrop-blur hover:bg-white/20" :text="$content['hero']->value('whatsapp_message') ?: 'Hello, I\'d like to know more about your services.'" />
     </x-page-hero>
+    <x-advert-slot :adverts="$adverts" at="hero:after" class="mt-12" />
 
+    <x-advert-slot :adverts="$adverts" at="list:before" class="mt-20" />
     <section class="mx-auto mt-20 max-w-7xl px-4 sm:px-6 lg:px-8">
         <x-section-heading :section="$content['list']" size="md" data-reveal />
         <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -24,7 +27,9 @@
             @endforeach
         </div>
     </section>
+    <x-advert-slot :adverts="$adverts" at="list:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="management:before" class="mt-20" />
     @if ($management->isShown() || $shortletSection->isShown())
     <section id="property-management" @class(['mx-auto mt-24 grid max-w-7xl scroll-mt-28 grid-cols-1 gap-12 px-4 sm:px-6 lg:px-8', 'lg:grid-cols-2' => $management->isShown() && $shortletSection->isShown()])>
         @if ($management->isShown())
@@ -86,8 +91,11 @@
         @endif
     </section>
     @endif
+    <x-advert-slot :adverts="$adverts" at="management:after" class="mt-16" />
 
+    <x-advert-slot :adverts="$adverts" at="cta:before" class="mt-20" />
     @if ($content['cta']->isShown())
         <x-cta-band class="mt-24" :title="$content['cta']->value('title')" :description="$content['cta']->value('description')" />
     @endif
+    <x-advert-slot :adverts="$adverts" at="cta:after" class="mt-16" />
 </x-layouts.app>

@@ -25,6 +25,7 @@ class UpdateEnquiryRequest extends FormRequest
         return [
             'status' => ['required', Rule::enum(EnquiryStatus::class)],
             'admin_notes' => ['nullable', 'string', 'max:5000'],
+            'client_message' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

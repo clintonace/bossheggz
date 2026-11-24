@@ -172,4 +172,60 @@ class SiteSettingControllerTest extends TestCase
         $this->assertSame("'Playfair Display', ui-serif, Georgia, serif", json_decode(html_entity_decode($fonts[1]), true)['playfair-display']['stack']);
         $this->assertArrayHasKey('--color-brass-500', json_decode(html_entity_decode($recipes[1]), true)['light']);
     }
+
+    public function test_glass_glow_and_contact_strip_can_be_changed(): void
+    {
+        $this->actingAs($this->admin)->put(route('admin.site.update', 'landing'), $this->payload([
+            'glass' => 'solid',
+            'ambient' => '0',
+            'contact_strip' => '0',
+            'tour' => '0',
+        ]))->assertSessionHasNoErrors();
+
+        $setting = SiteSetting::for(SiteArea::Landing);
+        $this->assertSame('solid', $setting->glassStyle());
+        $this->assertFalse($setting->ambientEnabled());
+        $this->assertFalse($setting->showsContactStrip());
+        $this->assertFalse($setting->tourEnabled());
+
+        auth()->logout();
+        $this->get(route('home'))
+            ->assertSee('data-glass="solid"', false)
+            ->assertDontSee('blur-[120px]', false)
+            ->assertDontSee('data-tour="list-property"', false);
+    }
+
+    public function test_new_effects_default_to_on(): void
+    {
+        $setting = SiteSetting::for(SiteArea::Admin);
+
+        $this->assertSame('frosted', $setting->glassStyle());
+        $this->assertTrue($setting->ambientEnabled());
+        $this->assertTrue($setting->tourEnabled());
+
+        $this->get(route('home'))
+            ->assertSee('data-glass="frosted"', false)
+            ->assertSee('blur-[120px]', false)
+            ->assertSee('data-tour="list-property"', false);
+    }
+
+    public function test_unknown_glass_style_is_rejected(): void
+    {
+        $this->actingAs($this->admin)->put(route('admin.site.update', 'admin'), $this->payload(['glass' => 'mirror']))
+            ->assertSessionHasErrors('glass');
+    }
+
+    public function test_edit_page_shows_new_sections(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.site.edit', 'landing'))
+            ->assertSeeText('Glass & effects')
+            ->assertSeeText('Contact strip')
+            ->assertSeeText('Guided tour')
+            ->assertSee(route('home').'?tour=1', false)
+            ->assertSee('data-preview-strip', false);
+
+        $this->actingAs($this->admin)->get(route('admin.site.edit', 'admin'))
+            ->assertDontSeeText('Contact strip')
+            ->assertSeeText('Welcome to the admin dashboard');
+    }
 }

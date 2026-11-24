@@ -37,4 +37,60 @@ enum EnquiryStatus: string
             self::Closed => 'bg-stone-100 text-stone-600 ring-stone-200',
         };
     }
+
+    /**
+     * How the status reads to the client in their dashboard.
+     */
+    public function clientLabel(): string
+    {
+        return match ($this) {
+            self::New => 'Received',
+            self::Contacted => 'Adviser in touch',
+            self::FollowUp => 'Following up',
+            self::Interested => 'Exploring options',
+            self::Converted => 'Completed',
+            self::Closed => 'Closed',
+        };
+    }
+
+    public function description(): string
+    {
+        return match ($this) {
+            self::New => 'We have received your enquiry. An adviser will be in touch shortly.',
+            self::Contacted => 'An adviser has reached out to you about this enquiry.',
+            self::FollowUp => 'Your adviser is following up on the details with you.',
+            self::Interested => 'You are reviewing the options with your adviser.',
+            self::Converted => 'This enquiry is complete. Thank you for choosing us.',
+            self::Closed => 'This enquiry has been closed. You can always send a new one.',
+        };
+    }
+
+    public function isOpen(): bool
+    {
+        return ! in_array($this, [self::Converted, self::Closed], true);
+    }
+
+    /**
+     * Position on the client's progress tracker (closed has no step).
+     */
+    public function step(): ?int
+    {
+        return match ($this) {
+            self::New => 1,
+            self::Contacted, self::FollowUp => 2,
+            self::Interested => 3,
+            self::Converted => 4,
+            self::Closed => null,
+        };
+    }
+
+    /**
+     * The steps shown on the client's progress tracker.
+     *
+     * @return array<int, string>
+     */
+    public static function clientSteps(): array
+    {
+        return [1 => 'Received', 2 => 'Adviser in touch', 3 => 'Exploring options', 4 => 'Completed'];
+    }
 }

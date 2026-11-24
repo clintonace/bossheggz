@@ -5,8 +5,11 @@
 @endphp
 
 <x-layouts.app :title="$content['meta']->value('title')" :description="$content['meta']->value('description')">
+    <x-advert-slot :adverts="$adverts" at="hero:before" class="mt-6" />
     <x-page-hero :section="$content['hero']" />
+    <x-advert-slot :adverts="$adverts" at="hero:after" class="mt-12" />
 
+    <x-advert-slot :adverts="$adverts" at="contact:before" class="mt-20" />
     <section class="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <div class="space-y-4">
             <a href="tel:{{ $company['phone'] }}" class="glass flex items-center gap-4 rounded-3xl p-6 transition hover:bg-white/75" data-reveal>
@@ -62,4 +65,5 @@
 
         <x-enquiry-form :type="$selectedType" :types="$types" :interest="$interest" :properties="$properties" :selected-property="$selectedProperty" :title="$content['form']->value('title')" :description="$content['form']->value('description')" :whatsapp-text="$whatsappMessage" class="self-start" />
     </section>
+    <x-advert-slot :adverts="$adverts" at="contact:after" class="mt-16" />
 </x-layouts.app>
