@@ -18,7 +18,7 @@ x-app: &app
     context: .
     dockerfile: docker/production/Dockerfile
   # Published from the prod branch to Docker Hub; override with APP_IMAGE.
-  image: ${APP_IMAGE:-clintonace/bossheggz:prod}
+  image: ${APP_IMAGE:-clintonace09/bossheggz:prod}
   restart: unless-stopped
   env_file: .env.production
   environment: &app-environment
