@@ -14,12 +14,12 @@
 
                 <div>
                     <span class="field-label">Listing type</span>
-                    <div class="grid grid-cols-2 gap-3" data-rent-toggle="#rent-period-field">
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4" data-rent-toggle="#rent-period-field">
                         @foreach (\App\Enums\ListingType::cases() as $type)
                             <label class="cursor-pointer">
                                 <input type="radio" name="listing_type" value="{{ $type->value }}" class="peer sr-only" @checked($listingType === $type->value)>
                                 <span class="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-sm font-semibold text-ink-600 ring-1 ring-ink-200 transition peer-checked:bg-ink-900 peer-checked:text-white peer-checked:ring-ink-900">
-                                    <x-icon :name="$type === \App\Enums\ListingType::Sale ? 'tag' : 'key'" class="size-4" /> {{ $type->label() }}
+                                    <x-icon :name="match ($type) { \App\Enums\ListingType::Sale => 'tag', \App\Enums\ListingType::Shortlet => 'calendar', \App\Enums\ListingType::Lease => 'building', default => 'key' }" class="size-4" /> {{ $type->label() }}
                                 </span>
                             </label>
                         @endforeach
@@ -34,7 +34,7 @@
                         @error('price') <p class="field-error">{{ $message }}</p> @enderror
                     </div>
                     <div id="rent-period-field">
-                        <label for="rent_period" class="field-label">Rent period</label>
+                        <label for="rent_period" class="field-label">Price per</label>
                         <select name="rent_period" id="rent_period" class="{{ $selectClasses }}">
                             @foreach (\App\Enums\RentPeriod::cases() as $period)
                                 <option value="{{ $period->value }}" @selected(old('rent_period', $property->rent_period?->value ?? 'year') === $period->value)>{{ ucfirst($period->label()) }}</option>
@@ -126,6 +126,16 @@
                         @endforeach
                     </select>
                     @error('property_type') <p class="field-error">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="verification_status" class="field-label">Verification</label>
+                    <select name="verification_status" id="verification_status" class="{{ $selectClasses }}">
+                        @foreach (\App\Enums\VerificationStatus::cases() as $verification)
+                            <option value="{{ $verification->value }}" @selected(old('verification_status', $property->verification_status?->value ?? 'pending') === $verification->value)>{{ $verification->label() }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1.5 text-xs text-ink-400">Only mark “Title verified” once the process is complete.</p>
+                    @error('verification_status') <p class="field-error">{{ $message }}</p> @enderror
                 </div>
                 <label class="flex cursor-pointer items-start gap-3 rounded-2xl bg-ivory p-4 ring-1 ring-ink-100">
                     <input type="hidden" name="is_featured" value="0">

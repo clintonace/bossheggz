@@ -1,11 +1,102 @@
 @props(['title', 'subtitle' => null, 'actions' => null])
 
 @php
+    $routeOpportunity = request()->route('opportunity');
+    $isLandView = request()->routeIs('admin.opportunities.*') && (request('category') === 'land_banking' || ($routeOpportunity instanceof \App\Models\InvestmentOpportunity && $routeOpportunity->isLand()));
+
+    // "Is this exact listing view open?" — route plus the query values that define it.
+    $is = fn (string $route, array $query = []): bool => request()->routeIs($route)
+        && collect($query)->every(fn ($value, $key) => (string) request()->query($key) === (string) $value);
+    $unfiltered = fn (array $keys): bool => collect($keys)->every(fn (string $key) => blank(request()->query($key)));
+
+    $statusLinks = fn (string $route, array $statuses, array $base = []): array => collect($statuses)->map(fn ($status) => [
+        'label' => $status->label(),
+        'url' => route($route, [...$base, 'status' => $status->value]),
+        'active' => $is($route, [...$base, 'status' => $status->value]),
+    ])->all();
+
     $nav = [
         ['label' => 'Dashboard', 'icon' => 'grid', 'url' => route('admin.dashboard'), 'active' => request()->routeIs('admin.dashboard')],
-        ['label' => 'Properties', 'icon' => 'building', 'url' => route('admin.properties.index'), 'active' => request()->routeIs('admin.properties.*')],
-        ['label' => 'Engagements', 'icon' => 'inbox', 'url' => route('admin.engagements.index'), 'active' => request()->routeIs('admin.engagements.*'), 'badge' => $newEngagementsCount],
+        [
+            'group' => 'nav-properties', 'label' => 'Properties', 'icon' => 'building',
+            'links' => [
+                ['label' => 'All properties', 'icon' => 'building', 'url' => route('admin.properties.index'), 'active' => ($is('admin.properties.index') && $unfiltered(['status', 'listing', 'q'])) || request()->routeIs('admin.properties.edit')],
+                ...$statusLinks('admin.properties.index', \App\Enums\PropertyStatus::cases()),
+                ['label' => 'Add property', 'icon' => 'plus', 'action' => true, 'url' => route('admin.properties.create'), 'active' => request()->routeIs('admin.properties.create')],
+            ],
+        ],
+        [
+            'group' => 'nav-engagements', 'label' => 'Engagements', 'icon' => 'inbox', 'badge' => $newEngagementsCount,
+            'links' => [
+                ['label' => 'All engagements', 'icon' => 'inbox', 'url' => route('admin.engagements.index'), 'active' => ($is('admin.engagements.index') && $unfiltered(['status', 'q'])) || request()->routeIs('admin.engagements.show')],
+                ...collect($statusLinks('admin.engagements.index', \App\Enums\EngagementStatus::cases()))
+                    ->map(fn (array $link, int $index) => $index === 0 ? [...$link, 'badge' => $newEngagementsCount] : $link)->all(),
+            ],
+        ],
+        [
+            'group' => 'nav-enquiries', 'label' => 'Enquiries', 'icon' => 'mail', 'badge' => $newEnquiriesCount,
+            'links' => [
+                ['label' => 'All enquiries', 'icon' => 'mail', 'url' => route('admin.enquiries.index'), 'active' => ($is('admin.enquiries.index') && $unfiltered(['status', 'type', 'q'])) || request()->routeIs('admin.enquiries.show')],
+                ['label' => 'New enquiries', 'url' => route('admin.enquiries.index', ['status' => 'new']), 'active' => $is('admin.enquiries.index', ['status' => 'new']), 'badge' => $newEnquiriesCount],
+                ['label' => 'Follow-up', 'url' => route('admin.enquiries.index', ['status' => 'follow_up']), 'active' => $is('admin.enquiries.index', ['status' => 'follow_up'])],
+                ['label' => 'Enquiry types', 'icon' => 'sliders', 'url' => route('admin.enquiry-types.index'), 'active' => request()->routeIs('admin.enquiry-types.*')],
+                ['label' => 'WhatsApp numbers', 'icon' => 'whatsapp', 'url' => route('admin.whatsapp-numbers.index'), 'active' => request()->routeIs('admin.whatsapp-numbers.*')],
+            ],
+        ],
+        [
+            'group' => 'nav-investments', 'label' => 'Investments', 'icon' => 'briefcase',
+            'links' => [
+                ['label' => 'All investments', 'icon' => 'briefcase', 'url' => route('admin.opportunities.index', ['category' => 'investments']), 'active' => ($is('admin.opportunities.index', ['category' => 'investments']) && $unfiltered(['status', 'q'])) || (request()->routeIs('admin.opportunities.edit') && ! $isLandView)],
+                ...$statusLinks('admin.opportunities.index', \App\Enums\OpportunityStatus::cases(), ['category' => 'investments']),
+                ['label' => 'Add opportunity', 'icon' => 'plus', 'action' => true, 'url' => route('admin.opportunities.create'), 'active' => request()->routeIs('admin.opportunities.create') && ! $isLandView],
+            ],
+        ],
+        [
+            'group' => 'nav-land', 'label' => 'Land Banking', 'icon' => 'leaf',
+            'links' => [
+                ['label' => 'All land', 'icon' => 'leaf', 'url' => route('admin.opportunities.index', ['category' => 'land_banking']), 'active' => ($is('admin.opportunities.index', ['category' => 'land_banking']) && $unfiltered(['status', 'q'])) || (request()->routeIs('admin.opportunities.edit') && $isLandView)],
+                ...$statusLinks('admin.opportunities.index', \App\Enums\OpportunityStatus::cases(), ['category' => 'land_banking']),
+                ['label' => 'Add land opportunity', 'icon' => 'plus', 'action' => true, 'url' => route('admin.opportunities.create', ['category' => 'land_banking']), 'active' => request()->routeIs('admin.opportunities.create') && $isLandView],
+            ],
+        ],
+        [
+            'group' => 'nav-insights', 'label' => 'Insights', 'icon' => 'book',
+            'links' => [
+                ['label' => 'All articles', 'icon' => 'book', 'url' => route('admin.articles.index'), 'active' => ($is('admin.articles.index') && $unfiltered(['status', 'category', 'q'])) || request()->routeIs('admin.articles.edit')],
+                ...collect(['published' => 'Published', 'scheduled' => 'Scheduled', 'draft' => 'Drafts'])->map(fn (string $label, string $status) => [
+                    'label' => $label,
+                    'url' => route('admin.articles.index', ['status' => $status]),
+                    'active' => $is('admin.articles.index', ['status' => $status]),
+                ])->values()->all(),
+                ['label' => 'Write an article', 'icon' => 'pencil', 'action' => true, 'url' => route('admin.articles.create'), 'active' => request()->routeIs('admin.articles.create')],
+            ],
+        ],
     ];
+
+    $advertView = request()->routeIs('admin.adverts.index') ? request('view', 'all') : null;
+    $advertLinks = [
+        ['label' => 'All adverts', 'icon' => 'megaphone', 'url' => route('admin.adverts.index'), 'active' => $advertView === 'all' || request()->routeIs('admin.adverts.edit')],
+        ...collect(\App\Enums\AdvertPage::cases())->map(fn ($advertPage) => [
+            'label' => $advertPage->label(),
+            'url' => route('admin.adverts.index', ['view' => $advertPage->value]),
+            'active' => $advertView === $advertPage->value,
+        ])->all(),
+        ['label' => 'Pop-up adverts', 'url' => route('admin.adverts.index', ['view' => 'popup']), 'active' => $advertView === 'popup'],
+        ['label' => 'New advert', 'icon' => 'plus', 'action' => true, 'url' => route('admin.adverts.create'), 'active' => request()->routeIs('admin.adverts.create')],
+    ];
+    $pageLinks = [
+        ['label' => 'All pages', 'icon' => 'file', 'url' => route('admin.pages.index'), 'active' => request()->routeIs('admin.pages.index')],
+        ...collect(\App\Enums\LandingPage::cases())->map(fn ($landingPage) => [
+            'label' => $landingPage->label(),
+            'url' => route('admin.pages.edit', $landingPage),
+            'active' => request()->routeIs('admin.pages.edit') && request()->route('page') === $landingPage,
+        ])->all(),
+    ];
+    $siteLinks = collect(\App\Enums\SiteArea::cases())->map(fn ($siteArea) => [
+        'label' => $siteArea->label(),
+        'url' => route('admin.site.edit', $siteArea),
+        'active' => request()->routeIs('admin.site.edit') && request()->route('area') === $siteArea,
+    ])->all();
 @endphp
 
 <!DOCTYPE html>
@@ -14,7 +105,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
-        <title>{{ $title }} · Admin · {{ config('app.name') }}</title>
+        <title>{{ $title }} · Admin · {{ config('listings.company.name') }}</title>
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <x-site-theme :theme="$siteTheme" />
@@ -28,6 +119,10 @@
 
         {{-- Sidebar (designed light; follows light/dark mode unless pinned in the Site manager) --}}
         <aside id="admin-sidebar" data-toggle-panel @if ($sidebarPalette = $siteTheme->sidebarPalette()) data-palette="{{ $sidebarPalette }}" @endif class="fixed inset-y-0 left-0 z-50 hidden w-72 flex-col border-r border-ink-100 bg-white text-ink-800 shadow-2xl lg:flex lg:shadow-none [&.is-open]:flex">
+            <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+                <div class="absolute -top-24 -left-20 size-72 rounded-full bg-brass-100/70 blur-3xl"></div>
+                <div class="absolute top-1/2 -right-28 size-72 rounded-full bg-ink-100/80 blur-3xl"></div>
+            </div>
             <div class="flex h-20 items-center justify-between px-6">
                 <x-logo />
                 <span class="rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-bold tracking-widest text-brass-700 uppercase ring-1 ring-brass-200">Admin</span>
@@ -36,6 +131,10 @@
             <nav class="mt-2 flex-1 space-y-1 overflow-y-auto px-4" aria-label="Admin">
                 <p class="px-3 pb-2 text-[11px] font-semibold tracking-[0.2em] text-ink-300 uppercase">Manage</p>
                 @foreach ($nav as $item)
+                    @if (isset($item['group']))
+                        <x-nav-group :id="$item['group']" :label="$item['label']" :icon="$item['icon']" :links="$item['links']" :badge="$item['badge'] ?? 0" />
+                        @continue
+                    @endif
                     <a href="{{ $item['url'] }}" @class([
                         'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
                         'bg-ink-900 text-white shadow-soft' => $item['active'],
@@ -43,42 +142,20 @@
                     ])>
                         <x-icon :name="$item['icon']" @class(['size-5', 'text-brass-300' => $item['active'], 'text-ink-300 group-hover:text-ink-500' => ! $item['active']]) />
                         {{ $item['label'] }}
-                        @if (($item['badge'] ?? 0) > 0)
-                            <span @class([
-                                'ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold',
-                                'bg-brass-500 text-white' => ! $item['active'],
-                                'bg-white/15 text-white' => $item['active'],
-                            ])>{{ $item['badge'] }}</span>
-                        @endif
                     </a>
                 @endforeach
 
-                {{-- Adverts manager dropdown --}}
-                @php
-                    $advertsOpen = request()->routeIs('admin.adverts.*');
-                    $advertView = request()->routeIs('admin.adverts.index') ? request('view', 'all') : null;
-                    $advertLinks = [
-                        ['label' => 'All adverts', 'url' => route('admin.adverts.index'), 'active' => $advertView === 'all'],
-                        ...collect(\App\Enums\AdvertPage::cases())->map(fn ($advertPage) => [
-                            'label' => $advertPage->label(),
-                            'url' => route('admin.adverts.index', ['view' => $advertPage->value]),
-                            'active' => $advertView === $advertPage->value,
-                        ])->all(),
-                        ['label' => 'Pop-up adverts', 'url' => route('admin.adverts.index', ['view' => 'popup']), 'active' => $advertView === 'popup'],
-                        ['label' => '+ New advert', 'url' => route('admin.adverts.create'), 'active' => request()->routeIs('admin.adverts.create')],
-                    ];
-                    $siteLinks = collect(\App\Enums\SiteArea::cases())->map(fn ($siteArea) => [
-                        'label' => $siteArea->label(),
-                        'url' => route('admin.site.edit', $siteArea),
-                        'active' => request()->routeIs('admin.site.edit') && request()->route('area') === $siteArea,
-                    ])->all();
-                @endphp
-                <x-admin-nav-group id="nav-adverts" label="Adverts" icon="megaphone" :open="$advertsOpen" :links="$advertLinks" />
-                <x-admin-nav-group id="nav-site" label="Site manager" icon="sliders" :open="request()->routeIs('admin.site.*')" :links="$siteLinks" />
+                <p class="px-3 pt-8 pb-2 text-[11px] font-semibold tracking-[0.2em] text-ink-300 uppercase">Website</p>
+                <x-nav-group id="nav-pages" label="Pages" icon="file" :links="$pageLinks" :open="request()->routeIs('admin.pages.*')" />
+                <x-nav-group id="nav-adverts" label="Adverts" icon="megaphone" :links="$advertLinks" :open="request()->routeIs('admin.adverts.*')" />
+                <x-nav-group id="nav-site" label="Site manager" icon="sliders" :links="$siteLinks" />
 
                 <p class="px-3 pt-8 pb-2 text-[11px] font-semibold tracking-[0.2em] text-ink-300 uppercase">Quick actions</p>
                 <a href="{{ route('admin.properties.create') }}" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 transition hover:bg-ivory hover:text-ink-900">
                     <x-icon name="plus" class="size-5 text-ink-300 group-hover:text-ink-500" /> New property
+                </a>
+                <a href="{{ route('admin.articles.create') }}" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 transition hover:bg-ivory hover:text-ink-900">
+                    <x-icon name="pencil" class="size-5 text-ink-300 group-hover:text-ink-500" /> New article
                 </a>
                 <a href="{{ route('home') }}" target="_blank" class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-600 transition hover:bg-ivory hover:text-ink-900">
                     <x-icon name="globe" class="size-5 text-ink-300 group-hover:text-ink-500" /> View website <x-icon name="external" class="ml-auto size-3.5 text-ink-300" />

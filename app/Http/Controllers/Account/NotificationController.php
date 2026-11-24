@@ -11,9 +11,13 @@ class NotificationController extends Controller
 {
     public function index(Request $request): View
     {
+        $filter = $request->query('filter') === 'unread' ? 'unread' : 'all';
+        $notifications = $filter === 'unread' ? $request->user()->unreadNotifications() : $request->user()->notifications();
+
         return view('account.notifications', [
-            'notifications' => $request->user()->notifications()->paginate(15),
+            'notifications' => $notifications->paginate(15)->withQueryString(),
             'unreadCount' => $request->user()->unreadNotifications()->count(),
+            'filter' => $filter,
         ]);
     }
 

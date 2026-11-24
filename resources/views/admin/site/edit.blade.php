@@ -207,7 +207,7 @@
                         <div data-preview-zoom class="flex min-h-[26rem]">
                             @if ($area->hasSidebar())
                                 <div data-preview-chrome class="flex w-36 shrink-0 flex-col gap-1.5 border-r border-ink-100 bg-white p-3 text-[11px] text-ink-600">
-                                    <span class="mb-2 flex items-center gap-1.5 font-display text-sm font-semibold text-ink-900"><span class="grid size-5 place-items-center rounded-md bg-ink-900 text-[10px] text-brass-300">S</span>{{ config('app.name') }}</span>
+                                    <span class="mb-2 flex items-center gap-1.5 font-display text-sm font-semibold text-ink-900"><span class="grid size-5 place-items-center rounded-md bg-ink-900 text-[10px] text-brass-300">S</span>{{ config('listings.company.name') }}</span>
                                     <span class="rounded-lg bg-ink-900 px-2 py-1.5 font-medium text-white">Overview</span>
                                     <span class="px-2 py-1">{{ $area === \App\Enums\SiteArea::Admin ? 'Properties' : 'Engagements' }}</span>
                                     <span class="px-2 py-1">{{ $area === \App\Enums\SiteArea::Admin ? 'Engagements' : 'Notifications' }}</span>
@@ -217,7 +217,7 @@
                             <div class="flex min-w-0 flex-1 flex-col">
                                 @unless ($area->hasSidebar())
                                     <div class="flex items-center justify-between border-b border-ink-100 px-4 py-3 text-[11px]">
-                                        <span class="flex items-center gap-1.5 font-display text-sm font-semibold text-ink-900"><span class="grid size-5 place-items-center rounded-md bg-ink-900 text-[10px] text-brass-300">S</span>{{ config('app.name') }}</span>
+                                        <span class="flex items-center gap-1.5 font-display text-sm font-semibold text-ink-900"><span class="grid size-5 place-items-center rounded-md bg-ink-900 text-[10px] text-brass-300">S</span>{{ config('listings.company.name') }}</span>
                                         <span class="flex gap-2 text-ink-500"><span>Home</span><span>For sale</span><span>For rent</span></span>
                                     </div>
                                 @endunless
@@ -245,7 +245,7 @@
                                 </div>
                                 @unless ($area->hasSidebar())
                                     <div data-preview-chrome class="bg-ink-950 px-4 py-3 text-[10px] text-ink-300">
-                                        <span class="font-display text-xs text-white">{{ config('app.name') }}</span> · Properties for sale · For rent · Contact
+                                        <span class="font-display text-xs text-white">{{ config('listings.company.name') }}</span> · Properties for sale · For rent · Contact
                                     </div>
                                 @endunless
                             </div>

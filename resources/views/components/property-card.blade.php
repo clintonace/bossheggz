@@ -1,12 +1,12 @@
 @props(['property'])
 
-<article {{ $attributes->merge(['class' => 'group relative flex flex-col overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-ink-100 transition duration-500 hover:-translate-y-1 hover:shadow-lift']) }}>
+<article {{ $attributes->merge(['class' => 'glass-card group relative flex flex-col overflow-hidden']) }}>
     <x-property-image :src="$property->cover_url" :alt="$property->title" class="aspect-[4/3]">
         <div class="absolute inset-x-0 top-0 flex items-start justify-between p-4">
             <span @class([
                 'rounded-full px-3 py-1 text-[11px] font-semibold tracking-wider uppercase backdrop-blur-md',
                 'bg-ink-900/80 text-white' => $property->listing_type === \App\Enums\ListingType::Sale,
-                'bg-white/90 text-ink-900' => $property->listing_type === \App\Enums\ListingType::Rent,
+                'bg-white/90 text-ink-900' => $property->listing_type !== \App\Enums\ListingType::Sale,
             ])>{{ $property->listing_type->label() }}</span>
 
             @if ($property->status !== \App\Enums\PropertyStatus::Published)
@@ -44,7 +44,13 @@
             @endif
         </div>
 
-        <div class="flex items-center justify-between border-t border-ink-100 pt-4">
+        @if ($property->verification_status && $property->verification_status !== \App\Enums\VerificationStatus::Pending)
+            <p class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <x-icon :name="$property->verification_status->icon()" class="size-3.5" /> {{ $property->verification_status->label() }}
+            </p>
+        @endif
+
+        <div class="flex items-center justify-between border-t border-ink-100/80 pt-4">
             <p class="text-lg font-semibold tracking-tight text-ink-900">{{ $property->formatted_price }}</p>
             <span class="grid size-9 place-items-center rounded-full bg-ink-50 text-ink-500 transition duration-300 group-hover:bg-ink-900 group-hover:text-white">
                 <x-icon name="arrow-right" class="size-4" />

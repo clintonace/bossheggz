@@ -3,11 +3,16 @@
 use App\Http\Controllers\Account;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\AdvertClickController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DevAccountSwitchController;
 use App\Http\Controllers\EngagementController;
+use App\Http\Controllers\EnquiryController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvestmentController;
+use App\Http\Controllers\LandBankingController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\PropertyController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +23,19 @@ Route::get('/properties/{property}', [PropertyController::class, 'show'])->name(
 Route::post('/properties/{property}/engage', [EngagementController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('properties.engage');
+
+Route::get('/investments', [InvestmentController::class, 'index'])->name('investments.index');
+Route::get('/investments/{opportunity}', [InvestmentController::class, 'show'])->name('investments.show');
+Route::get('/land-banking', [LandBankingController::class, 'index'])->name('land-banking.index');
+Route::get('/land-banking/{opportunity}', [LandBankingController::class, 'show'])->name('land-banking.show');
+
+Route::get('/insights', [ArticleController::class, 'index'])->name('insights.index');
+Route::get('/insights/{article}', [ArticleController::class, 'show'])->name('insights.show');
+
+Route::get('/services', [PageController::class, 'services'])->name('services');
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+Route::post('/enquiries', [EnquiryController::class, 'store'])->middleware('throttle:10,1')->name('enquiries.store');
 
 Route::get('/ads/{advert}', AdvertClickController::class)->middleware('throttle:60,1')->name('adverts.click');
 
@@ -54,8 +72,22 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::delete('/properties/{property}/images/{image}', [Admin\PropertyImageController::class, 'destroy'])->name('properties.images.destroy');
     });
 
+    Route::resource('opportunities', Admin\InvestmentOpportunityController::class)->except('show');
+    Route::resource('articles', Admin\ArticleController::class)->except('show');
+
+    Route::resource('enquiry-types', Admin\EnquiryTypeController::class)->except(['show', 'create']);
+    Route::resource('whatsapp-numbers', Admin\WhatsappNumberController::class)->except(['show', 'create']);
+
+    Route::get('/enquiries/export', [Admin\EnquiryController::class, 'export'])->name('enquiries.export');
+    Route::resource('enquiries', Admin\EnquiryController::class)->only(['index', 'show', 'update', 'destroy']);
+
     Route::resource('adverts', Admin\AdvertController::class)->except('show');
     Route::patch('/adverts/{advert}/toggle', [Admin\AdvertController::class, 'toggle'])->name('adverts.toggle');
+
+    Route::get('/pages', [Admin\PageContentController::class, 'index'])->name('pages.index');
+    Route::get('/pages/{page}', [Admin\PageContentController::class, 'edit'])->name('pages.edit');
+    Route::put('/pages/{page}', [Admin\PageContentController::class, 'update'])->name('pages.update');
+    Route::delete('/pages/{page}/sections/{section}', [Admin\PageContentController::class, 'reset'])->name('pages.reset');
 
     Route::redirect('/site', '/admin/site/landing')->name('site.index');
     Route::get('/site/{area}', [Admin\SiteSettingController::class, 'edit'])->name('site.edit');

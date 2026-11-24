@@ -30,8 +30,13 @@ enum AdvertPage: string
             self::Home => [
                 'hero' => ['label' => 'Hero & search', 'positions' => $around],
                 'featured' => ['label' => 'Featured properties', 'positions' => $around],
+                'services' => ['label' => 'Our services', 'positions' => $around],
                 'how_it_works' => ['label' => 'How it works', 'positions' => $around],
+                'guarantee' => ['label' => 'Why choose us (guarantee)', 'positions' => $around],
+                'investments' => ['label' => 'Investment opportunities', 'positions' => $around],
                 'latest' => ['label' => 'Latest on the market', 'positions' => $around],
+                'insights' => ['label' => 'Insights and resources', 'positions' => $around],
+                'cta' => ['label' => 'Speak to an adviser call to action', 'positions' => $around],
                 'signup' => ['label' => 'Sign-up call to action', 'positions' => $around],
             ],
             self::Listings => [

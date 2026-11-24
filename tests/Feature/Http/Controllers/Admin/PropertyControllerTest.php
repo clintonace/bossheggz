@@ -5,6 +5,7 @@ namespace Tests\Feature\Http\Controllers\Admin;
 use App\Enums\ListingType;
 use App\Enums\PropertyStatus;
 use App\Enums\RentPeriod;
+use App\Enums\VerificationStatus;
 use App\Models\Engagement;
 use App\Models\Property;
 use App\Models\User;
@@ -190,5 +191,24 @@ class PropertyControllerTest extends TestCase
 
         $this->assertModelMissing($property);
         Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_store_shortlet_defaults_to_nightly_pricing_and_saves_verification(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.properties.store'), $this->validPayload(['listing_type' => 'shortlet', 'rent_period' => 'night', 'verification_status' => 'verified']))
+            ->assertSessionHasNoErrors();
+
+        $property = Property::sole();
+        $this->assertSame(ListingType::Shortlet, $property->listing_type);
+        $this->assertSame(RentPeriod::Night, $property->rent_period);
+        $this->assertSame(VerificationStatus::Verified, $property->verification_status);
+    }
+
+    public function test_lease_requires_a_price_period(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.properties.store'), $this->validPayload(['listing_type' => 'lease', 'rent_period' => '']))
+            ->assertSessionHasErrors('rent_period');
     }
 }

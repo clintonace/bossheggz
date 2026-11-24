@@ -4,11 +4,16 @@ namespace App\Providers;
 
 use App\Enums\AdvertPage;
 use App\Enums\EngagementStatus;
+use App\Enums\EnquiryStatus;
 use App\Enums\SiteArea;
 use App\Models\Advert;
 use App\Models\Engagement;
+use App\Models\Enquiry;
+use App\Models\InvestmentOpportunity;
+use App\Models\Property;
 use App\Models\SiteSetting;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
@@ -28,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Relation::morphMap([
+            'property' => Property::class,
+            'investment_opportunity' => InvestmentOpportunity::class,
+        ]);
+
         View::composer(['components.layouts.app', 'components.layouts.admin', 'components.layouts.client'], function (ViewInstance $view): void {
             $user = auth()->user();
 
@@ -68,7 +78,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer('components.layouts.admin', function (ViewInstance $view): void {
-            $view->with('newEngagementsCount', Engagement::where('status', EngagementStatus::New)->count());
+            $view->with([
+                'newEngagementsCount' => Engagement::where('status', EngagementStatus::New)->count(),
+                'newEnquiriesCount' => Enquiry::where('status', EnquiryStatus::New)->count(),
+            ]);
         });
     }
 }

@@ -11,6 +11,9 @@
  *  - Pop-up (major) advert              [data-advert-popup]
  *  - Advert form placement dropdowns    [data-advert-form]
  *  - Light / dark / auto switch         [data-appearance-form]
+ *  - Show a block for some field values [data-show-for="field-name"][data-show-values="a,b"]
+ *  - Send an enquiry form via WhatsApp  [data-whatsapp-compose] (+ optional [data-whatsapp-number] select)
+ *  - Page CMS repeatable lists          [data-repeater] (+ [data-icon-select], [data-dirty-form])
  */
 
 /* ------------------------------------------------------------------ */
@@ -359,10 +362,73 @@ document.querySelectorAll('[data-rent-toggle]').forEach((select) => {
     const target = document.querySelector(select.dataset.rentToggle);
     const sync = () => {
         const selected = select.querySelector('input:checked')?.value ?? select.value;
-        if (target) target.hidden = selected !== 'rent';
+        if (target) target.hidden = selected === 'sale';
     };
     select.addEventListener('change', sync);
     sync();
+});
+
+/* ------------------------------------------------------------------ */
+/* Show a block only for some values of another field                  */
+/* ------------------------------------------------------------------ */
+document.querySelectorAll('[data-show-for]').forEach((block) => {
+    const form = block.closest('form') ?? document;
+    const fields = form.querySelectorAll(`[name="${block.dataset.showFor}"]`);
+    const values = (block.dataset.showValues || '').split(',');
+    const sync = () => {
+        const field = Array.from(fields).find((input) => input.type !== 'radio' || input.checked);
+        block.hidden = !values.includes(field?.value ?? '');
+    };
+    fields.forEach((field) => field.addEventListener('change', sync));
+    sync();
+});
+
+/* ------------------------------------------------------------------ */
+/* Send an enquiry form via WhatsApp                                    */
+/* ------------------------------------------------------------------ */
+document.querySelectorAll('[data-whatsapp-compose]').forEach((button) => {
+    const form = button.closest('form');
+    if (!form) return;
+
+    const numberSelect = form.querySelector('[data-whatsapp-number]');
+    const typeSelect = form.querySelector('select[name="type"]');
+
+    // Each enquiry type can have its own WhatsApp line.
+    typeSelect?.addEventListener('change', () => {
+        const number = typeSelect.selectedOptions[0]?.dataset.whatsapp;
+        if (!number) return;
+        button.dataset.number = number;
+        if (numberSelect && Array.from(numberSelect.options).some((option) => option.value === number)) {
+            numberSelect.value = number;
+        }
+    });
+
+    const valueOf = (name) => {
+        const field = form.elements.namedItem(name);
+        if (!field || field.type === 'hidden') return '';
+        if (field.tagName === 'SELECT') return field.value ? field.selectedOptions[0].textContent.trim() : '';
+        return (field.value || '').trim();
+    };
+
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        const number = numberSelect?.value || button.dataset.number;
+        const lines = [button.dataset.intro];
+        [
+            ['type', 'Enquiry'],
+            ['name', 'Name'],
+            ['email', 'Email'],
+            ['phone', 'Phone'],
+            ['property', 'Property'],
+            ['opportunity', 'Opportunity'],
+            ['interest', 'Looking for'],
+            ['message', 'Message'],
+        ].forEach(([name, label]) => {
+            const value = valueOf(name);
+            if (value) lines.push(`${label}: ${value}`);
+        });
+        window.open(`https://wa.me/${number}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+    });
 });
 
 /* ------------------------------------------------------------------ */
@@ -631,3 +697,88 @@ document.addEventListener(
     },
     true,
 );
+
+/* ------------------------------------------------------------------ */
+/* Page CMS: repeatable lists (add / remove / reorder rows)             */
+/* ------------------------------------------------------------------ */
+let repeaterCounter = 0;
+
+const refreshRepeater = (repeater) => {
+    const list = repeater.querySelector(':scope > [data-repeater-list]');
+    const rows = Array.from(list.children);
+    const max = Number(repeater.dataset.max || 12);
+    rows.forEach((row, index) => {
+        const number = row.querySelector('[data-repeater-number]');
+        if (number) number.textContent = String(index + 1);
+        row.querySelector('[data-repeater-up]')?.toggleAttribute('disabled', index === 0);
+        row.querySelector('[data-repeater-down]')?.toggleAttribute('disabled', index === rows.length - 1);
+    });
+    const count = repeater.querySelector('[data-repeater-count]');
+    if (count) count.textContent = String(rows.length);
+    const add = repeater.querySelector(':scope > [data-repeater-add]');
+    if (add) add.disabled = rows.length >= max;
+};
+
+const markDirty = (element) => {
+    element.closest('[data-dirty-form]')?.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
+document.querySelectorAll('[data-repeater]').forEach((repeater) => {
+    const list = repeater.querySelector(':scope > [data-repeater-list]');
+    const template = repeater.querySelector(':scope > [data-repeater-template]');
+
+    repeater.querySelector(':scope > [data-repeater-add]')?.addEventListener('click', () => {
+        const key = `n${Date.now()}${repeaterCounter++}`;
+        const html = template.innerHTML.replaceAll('__INDEX__', key);
+        list.insertAdjacentHTML('beforeend', html);
+        const row = list.lastElementChild;
+        row.classList.add('animate-fade-up');
+        row.querySelector('input:not([type=hidden]), textarea')?.focus();
+        refreshRepeater(repeater);
+        markDirty(repeater);
+    });
+
+    list.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-repeater-up], [data-repeater-down], [data-repeater-remove]');
+        if (!button) return;
+        const row = button.closest('[data-repeater-item]');
+        if (!row || row.parentElement !== list) return;
+
+        if (button.matches('[data-repeater-remove]')) row.remove();
+        if (button.matches('[data-repeater-up]') && row.previousElementSibling) list.insertBefore(row, row.previousElementSibling);
+        if (button.matches('[data-repeater-down]') && row.nextElementSibling) list.insertBefore(row.nextElementSibling, row);
+
+        refreshRepeater(repeater);
+        markDirty(repeater);
+    });
+
+    refreshRepeater(repeater);
+});
+
+/* Icon pickers show the chosen icon next to the select. */
+document.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-icon-select]');
+    if (!select) return;
+    const artwork = document.querySelector(`[data-icon-sprite] [data-icon="${CSS.escape(select.value)}"]`);
+    const preview = select.parentElement.querySelector('[data-icon-preview]');
+    if (artwork && preview) preview.innerHTML = artwork.innerHTML;
+});
+
+/* Forms that warn before leaving with unsaved changes. */
+document.querySelectorAll('[data-dirty-form]').forEach((form) => {
+    let dirty = false;
+    const setDirty = () => {
+        if (dirty) return;
+        dirty = true;
+        form.querySelectorAll('[data-dirty-indicator]').forEach((el) => (el.hidden = false));
+        form.querySelectorAll('[data-clean-indicator]').forEach((el) => (el.hidden = true));
+    };
+    form.addEventListener('input', setDirty);
+    form.addEventListener('change', setDirty);
+    document.addEventListener('submit', () => (dirty = false), true);
+    window.addEventListener('beforeunload', (event) => {
+        if (!dirty) return;
+        event.preventDefault();
+        event.returnValue = '';
+    });
+});

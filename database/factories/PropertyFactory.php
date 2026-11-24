@@ -6,6 +6,7 @@ use App\Enums\ListingType;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\RentPeriod;
+use App\Enums\VerificationStatus;
 use App\Models\Property;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -46,6 +47,22 @@ class PropertyFactory extends Factory
             'listing_type' => ListingType::Rent,
             'rent_period' => $period,
             'price' => fake()->numberBetween(1, 30) * 500_000,
+        ]);
+    }
+
+    public function shortlet(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'listing_type' => ListingType::Shortlet,
+            'rent_period' => RentPeriod::Night,
+            'price' => fake()->numberBetween(5, 40) * 10_000,
+        ]);
+    }
+
+    public function verified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'verification_status' => VerificationStatus::Verified,
         ]);
     }
 

@@ -28,6 +28,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Company
+    |--------------------------------------------------------------------------
+    |
+    | The brand shown in the logo, footer and contact page. The WhatsApp
+    | number is written in international format without "+" or spaces.
+    |
+    */
+
+    'company' => [
+        'name' => env('COMPANY_NAME', 'BOSSHEGZ Realty'),
+        'legal_name' => env('COMPANY_LEGAL_NAME', 'BOSSHEGZ Realty Ltd'),
+        'tagline' => env('COMPANY_TAGLINE', 'Strategic Property. Lasting Wealth.'),
+        'phone' => env('COMPANY_PHONE', '+2348111708068'),
+        'whatsapp' => env('COMPANY_WHATSAPP', '2348111708068'),
+        'email' => env('COMPANY_EMAIL', 'bosshegz@yahoo.com'),
+        'instagram' => env('COMPANY_INSTAGRAM', 'bosshegzrealty'),
+        'address' => env('COMPANY_ADDRESS'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Test account switcher
     |--------------------------------------------------------------------------
     |

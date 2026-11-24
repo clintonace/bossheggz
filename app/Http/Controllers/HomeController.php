@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AdvertPage;
+use App\Enums\LandingPage;
 use App\Enums\ListingType;
+use App\Enums\OpportunityStatus;
 use App\Models\Advert;
+use App\Models\Article;
+use App\Models\InvestmentOpportunity;
 use App\Models\Property;
 use Illuminate\View\View;
 
@@ -17,10 +21,18 @@ class HomeController extends Controller
         $latest = Property::visible()->with('coverImage')->latest('published_at')->take(6)->get();
 
         return view('home', [
+            'content' => LandingPage::Home->content(),
             'featured' => $featured,
             'latest' => $latest,
             'cities' => Property::visible()->distinct()->orderBy('city')->pluck('city'),
             'adverts' => Advert::slotsFor(AdvertPage::Home),
+            'opportunities' => InvestmentOpportunity::visible()
+                ->orderByRaw('status = ? desc', [OpportunityStatus::Open->value])
+                ->orderByDesc('is_featured')
+                ->latest('published_at')
+                ->take(3)
+                ->get(),
+            'articles' => Article::published()->latest('published_at')->take(3)->get(),
             'stats' => [
                 'sale' => Property::visible()->where('listing_type', ListingType::Sale)->count(),
                 'rent' => Property::visible()->where('listing_type', ListingType::Rent)->count(),

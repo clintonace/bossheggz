@@ -3,7 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\EngagementStatus;
+use App\Enums\EnquiryStatus;
 use App\Models\Engagement;
+use App\Models\Enquiry;
+use App\Models\InvestmentOpportunity;
 use App\Models\Property;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -25,7 +28,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        $this->call([PropertySeeder::class, AdvertSeeder::class]);
+        $this->call([PropertySeeder::class, AdvertSeeder::class, InvestmentOpportunitySeeder::class, ArticleSeeder::class]);
 
         $properties = Property::visible()->take(3)->get();
 
@@ -44,5 +47,11 @@ class DatabaseSeeder extends Seeder
 
         Engagement::factory()->for($properties[1])->status(EngagementStatus::Negotiating)->create(['created_at' => now()->subDays(10)]);
         Engagement::factory()->for($properties[1])->status(EngagementStatus::Contacted)->create(['created_at' => now()->subDays(5)]);
+
+        $opportunity = InvestmentOpportunity::visible()->first();
+        Enquiry::factory()->ofType('consultation')->create(['interest' => 'Investment advisory', 'created_at' => now()->subHours(3)]);
+        Enquiry::factory()->ofType('land_banking')->status(EnquiryStatus::Contacted)->create(['created_at' => now()->subDays(2)])->enquirable()->associate($opportunity)->save();
+        Enquiry::factory()->ofType('investment')->status(EnquiryStatus::FollowUp)->create(['interest' => 'Rental income', 'created_at' => now()->subDays(4)]);
+        Enquiry::factory()->ofType('list_property')->status(EnquiryStatus::Interested)->create(['interest' => '3 bedroom flat in Yaba', 'created_at' => now()->subDays(6)]);
     }
 }

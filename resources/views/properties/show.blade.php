@@ -22,12 +22,15 @@
                     <span class="rounded-full bg-ink-900 px-3 py-1 text-[11px] font-semibold tracking-wider text-white uppercase">{{ $property->listing_type->label() }}</span>
                     <span class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-600 uppercase ring-1 ring-ink-100">{{ $property->property_type->label() }}</span>
                     <x-status-badge :status="$property->status" />
+                    @if ($property->verification_status)
+                        <x-status-badge :status="$property->verification_status" />
+                    @endif
                 </div>
                 <h1 class="mt-4 max-w-3xl font-display text-4xl leading-tight tracking-tight text-ink-950 sm:text-5xl">{{ $property->title }}</h1>
                 <p class="mt-3 flex items-center gap-2 text-ink-500"><x-icon name="map-pin" class="size-4 text-brass-500" /> {{ $property->address }}, {{ $property->location }}</p>
             </div>
             <div class="animate-fade-up text-left [animation-delay:120ms] lg:text-right">
-                <p class="text-xs font-semibold tracking-wider text-ink-400 uppercase">{{ $property->listing_type === \App\Enums\ListingType::Rent ? 'Rent' : 'Asking price' }}</p>
+                <p class="text-xs font-semibold tracking-wider text-ink-400 uppercase">{{ match ($property->listing_type) { \App\Enums\ListingType::Sale => 'Asking price', \App\Enums\ListingType::Shortlet => 'Nightly rate', \App\Enums\ListingType::Lease => 'Lease', default => 'Rent' } }}</p>
                 <p class="mt-1 font-display text-4xl text-ink-950">{{ $property->formatted_price }}</p>
             </div>
         </div>
@@ -77,7 +80,7 @@
                         ['area', 'Floor area', $property->area_sqm ? number_format($property->area_sqm).' m²' : null],
                         ['building', 'Type', $property->property_type->label()],
                     ], fn ($item) => filled($item[2])) as [$icon, $label, $value])
-                        <div class="card p-5">
+                        <div class="glass rounded-2xl p-5">
                             <x-icon :name="$icon" class="size-5 text-brass-500" />
                             <dt class="mt-4 text-xs font-medium tracking-wider text-ink-400 uppercase">{{ $label }}</dt>
                             <dd class="mt-1 font-display text-2xl text-ink-900">{{ $value }}</dd>
@@ -99,7 +102,7 @@
                         <h2 class="font-display text-3xl text-ink-950">Features &amp; amenities</h2>
                         <ul class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                             @foreach ($property->features as $feature)
-                                <li class="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-sm text-ink-700 ring-1 ring-ink-100">
+                                <li class="glass flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm text-ink-700">
                                     <span class="grid size-7 place-items-center rounded-full bg-brass-50 text-brass-600"><x-icon name="check" class="size-3.5" stroke="2.5" /></span>
                                     {{ $feature }}
                                 </li>
@@ -108,7 +111,7 @@
                     </div>
                 @endif
 
-                <div class="mt-12 flex items-center gap-4 rounded-3xl bg-white p-6 ring-1 ring-ink-100" data-reveal>
+                <div class="glass mt-12 flex items-center gap-4 rounded-3xl p-6" data-reveal>
                     <span class="grid size-12 place-items-center rounded-2xl bg-ink-900 text-brass-300"><x-icon name="map-pin" /></span>
                     <div class="min-w-0">
                         <p class="text-xs font-medium tracking-wider text-ink-400 uppercase">Location</p>
@@ -122,7 +125,7 @@
 
             {{-- Engage card --}}
             <aside class="lg:col-span-5 xl:col-span-4">
-                <div id="engage" class="sticky top-24 scroll-mt-28 overflow-hidden rounded-[2rem] bg-white shadow-lift ring-1 ring-ink-100">
+                <div id="engage" class="glass-strong sticky top-24 scroll-mt-28 overflow-hidden rounded-[2rem]">
                     <div class="bg-ink-950 px-7 py-6 text-white">
                         <p class="text-xs font-semibold tracking-[0.2em] text-brass-300 uppercase">Interested?</p>
                         <h2 class="mt-2 font-display text-2xl">Engage with this property</h2>
@@ -187,6 +190,9 @@
                                     <p class="flex items-start gap-2 text-xs text-ink-400"><x-icon name="lock" class="size-4 shrink-0 text-ink-300" /> We only use your details to contact you about this property.</p>
                                 @endauth
                             </form>
+
+                            <x-whatsapp-button class="btn-outline mt-3 w-full" :text="'Hello, I am interested in '.$property->title.' ('.route('properties.show', $property).')'" />
+                            <a href="{{ route('contact', ['type' => 'consultation', 'property' => $property->slug]) }}#enquire" class="mt-3 block text-center text-sm font-semibold text-brass-700 hover:text-brass-600">Speak to an adviser about this property</a>
 
                             @guest
                                 <div class="mt-6 rounded-2xl bg-gradient-to-br from-brass-50 to-ivory p-5 ring-1 ring-brass-100">

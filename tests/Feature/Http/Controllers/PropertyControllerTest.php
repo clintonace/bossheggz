@@ -148,4 +148,31 @@ class PropertyControllerTest extends TestCase
 
         $response->assertSeeInOrder(['data-advert-slot="grid:after"', 'md:col-span-6', 'Left Half', 'md:col-span-6', 'Right Half'], false);
     }
+
+    public function test_index_filters_shortlets_verified_featured_state_and_size(): void
+    {
+        $match = Property::factory()->shortlet()->verified()->featured()->create(['state' => 'Lagos', 'area_sqm' => 300]);
+        $unverified = Property::factory()->shortlet()->featured()->create(['state' => 'Lagos', 'area_sqm' => 300]);
+        $otherState = Property::factory()->shortlet()->verified()->featured()->create(['state' => 'Abuja', 'area_sqm' => 300]);
+        $tooBig = Property::factory()->shortlet()->verified()->featured()->create(['state' => 'Lagos', 'area_sqm' => 2000]);
+        $forSale = Property::factory()->verified()->featured()->create(['state' => 'Lagos', 'area_sqm' => 300]);
+
+        $response = $this->get(route('properties.index', ['listing' => 'shortlet', 'verified' => 1, 'featured' => 1, 'state' => 'Lagos', 'size' => '250-500']));
+
+        $response->assertOk()->assertSeeText('Shortlet apartments');
+        $response->assertSee(route('properties.show', $match), false);
+        foreach ([$unverified, $otherState, $tooBig, $forSale] as $excluded) {
+            $response->assertDontSee(route('properties.show', $excluded), false);
+        }
+    }
+
+    public function test_shortlet_price_is_shown_per_night_and_verification_on_the_page(): void
+    {
+        $property = Property::factory()->shortlet()->verified()->create(['price' => 120_000]);
+
+        $this->get(route('properties.show', $property))
+            ->assertOk()
+            ->assertSeeText('₦120,000 /night')
+            ->assertSeeText('Title verified');
+    }
 }

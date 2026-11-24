@@ -1,5 +1,6 @@
 <x-layouts.admin title="Dashboard" :subtitle="'Good '.(now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening')).', '.str(auth()->user()->name)->before(' ').'. Here is what is happening today.'">
     <x-slot:actions>
+        <a href="{{ route('admin.articles.create') }}" class="btn btn-outline hidden md:inline-flex"><x-icon name="pencil" class="size-4" /> New article</a>
         <a href="{{ route('admin.properties.create') }}" class="btn btn-primary hidden sm:inline-flex"><x-icon name="plus" class="size-4" /> New property</a>
     </x-slot:actions>
 
@@ -19,6 +20,24 @@
                 <p class="mt-6 text-sm font-medium text-ink-500">{{ $label }}</p>
                 <p class="mt-1 font-display text-4xl tracking-tight text-ink-950">{{ number_format($value) }}</p>
                 <p class="mt-2 text-xs text-ink-400">{{ $meta }}</p>
+            </a>
+        @endforeach
+    </div>
+
+
+    {{-- Website overview --}}
+    <div class="mt-6 grid animate-fade-up grid-cols-2 gap-3 [animation-delay:200ms] sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+        @foreach ([
+            ['Total listings', $overview['listings'], route('admin.properties.index')],
+            ['Active listings', $overview['active'], route('admin.properties.index', ['status' => 'published'])],
+            ['Sold', $overview['sold'], route('admin.properties.index', ['status' => 'sold'])],
+            ['Rented', $overview['rented'], route('admin.properties.index', ['status' => 'rented'])],
+            ['Investment opportunities', $overview['opportunities'], route('admin.opportunities.index')],
+            ['Total enquiries', $overview['enquiries'], route('admin.enquiries.index')],
+        ] as [$label, $value, $url])
+            <a href="{{ $url }}" class="card group px-5 py-4 transition hover:-translate-y-0.5 hover:shadow-lift">
+                <p class="font-display text-3xl tracking-tight text-ink-950 tabular-nums">{{ number_format($value) }}</p>
+                <p class="mt-1 text-xs font-medium text-ink-500 group-hover:text-ink-900">{{ $label }}</p>
             </a>
         @endforeach
     </div>
@@ -159,6 +178,69 @@
                         </li>
                     @endforeach
                 </ol>
+            @endif
+        </section>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {{-- Recent enquiries --}}
+        <section class="card animate-fade-up overflow-hidden [animation-delay:480ms] xl:col-span-2">
+            <div class="flex items-center justify-between px-6 pt-6">
+                <h2 class="font-display text-xl text-ink-900">Recent enquiries</h2>
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('admin.enquiries.export') }}" data-no-loader class="text-sm font-semibold text-ink-500 hover:text-ink-900">Export</a>
+                    <a href="{{ route('admin.enquiries.index') }}" class="text-sm font-semibold text-brass-600 hover:text-brass-700">View all</a>
+                </div>
+            </div>
+            @if ($recentEnquiries->isEmpty())
+                <p class="px-6 py-14 text-center text-sm text-ink-400">No enquiries yet. Contact, investment and land banking enquiries will appear here.</p>
+            @else
+                <div class="mt-4 overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs tracking-wider text-ink-400 uppercase">
+                            <tr>
+                                <th class="px-6 py-2 font-semibold">Enquirer</th>
+                                <th class="px-4 py-2 font-semibold">Interest</th>
+                                <th class="px-4 py-2 font-semibold">Status</th>
+                                <th class="px-6 py-2 text-right font-semibold">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-ink-50">
+                            @foreach ($recentEnquiries as $enquiry)
+                                <tr class="relative transition hover:bg-ivory">
+                                    <td class="px-6 py-3.5"><a href="{{ route('admin.enquiries.show', $enquiry) }}" class="font-semibold text-ink-900 after:absolute after:inset-0">{{ $enquiry->name }}</a></td>
+                                    <td class="max-w-56 truncate px-4 py-3.5 text-ink-600">{{ $enquiry->subject() }}</td>
+                                    <td class="px-4 py-3.5"><x-status-badge :status="$enquiry->status" /></td>
+                                    <td class="px-6 py-3.5 text-right text-xs whitespace-nowrap text-ink-400">{{ $enquiry->created_at->format('M j') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <p class="px-6 py-4 text-xs text-ink-400">Internal notes, status updates and export are available per enquiry.</p>
+            @endif
+        </section>
+
+        {{-- Activity --}}
+        <section class="card animate-fade-up p-6 [animation-delay:540ms]">
+            <h2 class="font-display text-xl text-ink-900">Recent website activity</h2>
+            @if ($activity->isEmpty())
+                <p class="py-10 text-center text-sm text-ink-400">Nothing has happened yet.</p>
+            @else
+                <ul class="mt-4 divide-y divide-ink-50">
+                    @foreach ($activity as $item)
+                        <li>
+                            <a href="{{ $item['url'] }}" class="group flex items-start gap-3 py-3">
+                                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-ivory text-ink-400 ring-1 ring-ink-100 group-hover:text-brass-600"><x-icon :name="$item['icon']" class="size-4" /></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-medium text-ink-900">{{ $item['text'] }}</span>
+                                    <span class="block truncate text-xs text-ink-400">{{ $item['detail'] }}</span>
+                                </span>
+                                <span class="shrink-0 text-[11px] text-ink-300">{{ $item['at']->diffForHumans(short: true) }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
             @endif
         </section>
     </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AdvertPage;
 use App\Enums\AdvertPosition;
+use App\Enums\LandingPage;
 use App\Models\Advert;
 use App\Models\Property;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class PropertyController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->only(['q', 'listing', 'type', 'city', 'min_price', 'max_price', 'beds']);
+        $filters = $request->only(['q', 'listing', 'type', 'state', 'city', 'min_price', 'max_price', 'beds', 'size', 'availability', 'featured', 'verified']);
 
         $sort = $request->string('sort')->toString();
 
@@ -30,10 +31,12 @@ class PropertyController extends Controller
             ->withQueryString();
 
         return view('properties.index', [
+            'content' => LandingPage::Properties->content(),
             'properties' => $properties,
             'filters' => $filters,
             'sort' => $sort,
             'cities' => Property::visible()->distinct()->orderBy('city')->pluck('city'),
+            'states' => Property::visible()->whereNotNull('state')->distinct()->orderBy('state')->pluck('state'),
             'adverts' => $adverts,
             'gridAdverts' => $gridAdverts,
         ]);

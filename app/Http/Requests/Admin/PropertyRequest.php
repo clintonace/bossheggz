@@ -6,6 +6,7 @@ use App\Enums\ListingType;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\RentPeriod;
+use App\Enums\VerificationStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,7 +32,8 @@ class PropertyRequest extends FormRequest
             'property_type' => ['required', Rule::enum(PropertyType::class)],
             'status' => ['required', Rule::enum(PropertyStatus::class)],
             'price' => ['required', 'integer', 'min:0'],
-            'rent_period' => ['nullable', 'required_if:listing_type,rent', Rule::enum(RentPeriod::class)],
+            'verification_status' => ['nullable', Rule::enum(VerificationStatus::class)],
+            'rent_period' => ['nullable', Rule::requiredIf(fn (): bool => in_array($this->input('listing_type'), ListingType::periodicValues(), true)), Rule::enum(RentPeriod::class)],
             'address' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:120'],
             'state' => ['nullable', 'string', 'max:120'],
@@ -52,7 +54,7 @@ class PropertyRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'rent_period.required_if' => 'Choose how often rent is paid.',
+            'rent_period.required' => 'Choose how often rent is paid.',
             'images.*.max' => 'Each image must be 5MB or smaller.',
             'images.*.image' => 'Only image files can be uploaded.',
         ];

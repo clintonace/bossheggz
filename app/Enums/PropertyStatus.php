@@ -7,6 +7,7 @@ enum PropertyStatus: string
     case Draft = 'draft';
     case Published = 'published';
     case UnderOffer = 'under_offer';
+    case Reserved = 'reserved';
     case Sold = 'sold';
     case Rented = 'rented';
 
@@ -16,6 +17,7 @@ enum PropertyStatus: string
             self::Draft => 'Draft',
             self::Published => 'Available',
             self::UnderOffer => 'Under Offer',
+            self::Reserved => 'Reserved',
             self::Sold => 'Sold',
             self::Rented => 'Rented',
         };
@@ -29,7 +31,7 @@ enum PropertyStatus: string
         return match ($this) {
             self::Draft => 'bg-stone-100 text-stone-600 ring-stone-200',
             self::Published => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-            self::UnderOffer => 'bg-amber-50 text-amber-700 ring-amber-200',
+            self::UnderOffer, self::Reserved => 'bg-amber-50 text-amber-700 ring-amber-200',
             self::Sold, self::Rented => 'bg-rose-50 text-rose-700 ring-rose-200',
         };
     }

@@ -9,8 +9,19 @@
     @endif
 
     <section class="max-w-3xl">
+        <div class="mb-6 inline-flex gap-1 rounded-full bg-white p-1 shadow-soft ring-1 ring-ink-100">
+            @foreach (['all' => 'All', 'unread' => 'Unread'] as $key => $label)
+                <a href="{{ route('account.notifications.index', $key === 'all' ? [] : ['filter' => $key]) }}" @class(['rounded-full px-4 py-2 text-sm font-medium transition', 'bg-ink-900 text-white' => $filter === $key, 'text-ink-500 hover:text-ink-900' => $filter !== $key])>
+                    {{ $label }}
+                    @if ($key === 'unread' && $unreadCount > 0)
+                        <span class="ml-1 text-xs opacity-70">{{ $unreadCount }}</span>
+                    @endif
+                </a>
+            @endforeach
+        </div>
+
         @if ($notifications->isEmpty())
-            <x-empty-state icon="bell" title="No notifications yet" description="Updates on the properties you engage with will appear here and in your email." />
+            <x-empty-state icon="bell" :title="$filter === 'unread' ? 'You are all caught up' : 'No notifications yet'" :description="$filter === 'unread' ? 'There are no unread notifications.' : 'Updates on the properties you engage with will appear here and in your email.'" />
         @else
             <div class="divide-y divide-ink-100 overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-ink-100">
                 @foreach ($notifications as $notification)
